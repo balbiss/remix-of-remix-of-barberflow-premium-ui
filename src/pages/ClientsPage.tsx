@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockClients, Client } from '@/data/mockData';
+import { useClients, useAddClient, useUpdateClient, useDeleteClient, Client } from '@/hooks/useClients';
 import LoyaltyCard from '@/components/LoyaltyCard';
-import { Search, Phone, Star, Plus, X, UserPlus, Pencil, Trash2 } from 'lucide-react';
+import { Search, Phone, Star, Plus, X, UserPlus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -10,9 +10,13 @@ import { usePopup } from '@/contexts/PopupContext';
 
 const ClientsPage = () => {
   const popup = usePopup();
+  const { data: clients = [], isLoading } = useClients();
+  const addClient = useAddClient();
+  const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
+
   const [search, setSearch] = useState('');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [clients, setClients] = useState<Client[]>(mockClients);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchByPhone, setSearchByPhone] = useState(false);
 
@@ -45,46 +49,50 @@ const ClientsPage = () => {
     setDrawerOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formName.trim() || !formPhone.trim()) {
       popup.error('Preencha nome e WhatsApp do cliente.');
       return;
     }
 
-    if (editingClient) {
-      setClients(prev =>
-        prev.map(c =>
-          c.id === editingClient.id
-            ? { ...c, name: formName.trim(), phone: formPhone.trim() }
-            : c
-        )
-      );
-      popup.success(`${formName.trim()} atualizado com sucesso!`);
-    } else {
-      const newClient: Client = {
-        id: `c${Date.now()}`,
-        name: formName.trim(),
-        phone: formPhone.trim(),
-        loyaltyStamps: 0,
-        totalSpent: 0,
-        lastVisit: new Date().toISOString().split('T')[0],
-      };
-      setClients(prev => [newClient, ...prev]);
-      popup.success(`${newClient.name} cadastrado com sucesso!`);
-    }
+    try {
+      if (editingClient) {
+        await updateClient.mutateAsync({
+          id: editingClient.id,
+          name: formName.trim(),
+          phone: formPhone.trim()
+        });
+        popup.success(`${formName.trim()} atualizado com sucesso!`);
+      } else {
+        await addClient.mutateAsync({
+          name: formName.trim(),
+          phone: formPhone.trim(),
+          loyalty_stamps: 0,
+          total_spent: 0,
+          last_visit: new Date().toISOString().split('T')[0],
+        });
+        popup.success(`${formName.trim()} cadastrado com sucesso!`);
+      }
 
-    setFormName('');
-    setFormPhone('');
-    setEditingClient(null);
-    setDrawerOpen(false);
+      setFormName('');
+      setFormPhone('');
+      setEditingClient(null);
+      setDrawerOpen(false);
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao salvar cliente');
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setClients(prev => prev.filter(c => c.id !== deleteTarget.id));
-    if (selectedClientId === deleteTarget.id) setSelectedClientId(null);
-    popup.success(`${deleteTarget.name} removido.`);
-    setDeleteTarget(null);
+    try {
+      await deleteClient.mutateAsync(deleteTarget.id);
+      if (selectedClientId === deleteTarget.id) setSelectedClientId(null);
+      popup.success(`${deleteTarget.name} removido.`);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao excluir cliente');
+    }
   };
 
   return (
@@ -153,14 +161,19 @@ const ClientsPage = () => {
               exit={{ opacity: 0, height: 0 }}
               className="mb-6"
             >
-              <LoyaltyCard stamps={selectedClient.loyaltyStamps} clientName={selectedClient.name} />
+              <LoyaltyCard stamps={selectedClient.loyalty_stamps} clientName={selectedClient.name} />
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Client List */}
         <div className="space-y-2">
-          {filtered.length === 0 && (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground">Carregando clientes...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-sm text-muted-foreground">Nenhum cliente encontrado</p>
               <Button
@@ -172,49 +185,49 @@ const ClientsPage = () => {
                 <UserPlus className="w-5 h-5 mr-1.5" /> Cadastrar novo cliente
               </Button>
             </div>
-          )}
-          {filtered.map((client, i) => (
-            <motion.div
-              key={client.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={`w-full obsidian-card text-left transition-all ${
-                selectedClientId === client.id ? 'border-primary/50' : ''
-              }`}
-            >
-              <button
-                className="w-full text-left"
-                onClick={() => setSelectedClientId(
-                  selectedClientId === client.id ? null : client.id
-                )}
+          ) : (
+            filtered.map((client, i) => (
+              <motion.div
+                key={client.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={`w-full obsidian-card text-left transition-all ${
+                  selectedClientId === client.id ? 'border-primary/50' : ''
+                }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center">
-                      <span className="text-sm font-bold gold-text">
-                        {client.name.split(' ').map(n => n[0]).join('')}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-base font-medium text-foreground">{client.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Phone className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
-                        <span className="text-sm text-muted-foreground">{client.phone}</span>
+                <button
+                  className="w-full text-left"
+                  onClick={() => setSelectedClientId(
+                    selectedClientId === client.id ? null : client.id
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center">
+                        <span className="text-sm font-bold gold-text">
+                          {client.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-base font-medium text-foreground">{client.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Phone className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+                          <span className="text-sm text-muted-foreground">{client.phone}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 gold-text" strokeWidth={1.5} fill="hsl(38 92% 50%)" />
-                      <span className="text-sm font-mono-tabular gold-text">{client.loyaltyStamps}/10</span>
+                    <div className="text-right">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 gold-text" strokeWidth={1.5} fill="hsl(38 92% 50%)" />
+                        <span className="text-sm font-mono-tabular gold-text">{client.loyalty_stamps}/10</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        R$ {Number(client.total_spent).toLocaleString('pt-BR')}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      R$ {client.totalSpent.toLocaleString('pt-BR')}
-                    </p>
                   </div>
-                </div>
-              </button>
+                </button>
 
               <AnimatePresence>
                 {selectedClientId === client.id && (
@@ -244,7 +257,7 @@ const ClientsPage = () => {
                 )}
               </AnimatePresence>
             </motion.div>
-          ))}
+          )))}
         </div>
       </div>
 

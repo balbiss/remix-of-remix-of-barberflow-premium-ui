@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockBarbers, Barber } from '@/data/mockData';
-import { Plus, Edit2, Trash2, Phone, Mail, Percent, UserCheck, UserX } from 'lucide-react';
+import { useBarbers, useAddBarber, useUpdateBarber, useDeleteBarber, useToggleBarberActive, Barber } from '@/hooks/useBarbers';
+import { Plus, Edit2, Trash2, Phone, Mail, Percent, UserCheck, UserX, Loader2 } from 'lucide-react';
 import { usePopup } from '@/contexts/PopupContext';
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose,
@@ -10,10 +10,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 const BarbersPage = () => {
   const popup = usePopup();
-  const [barbers, setBarbers] = useState<Barber[]>(mockBarbers);
+  const { data: barbers = [], isLoading } = useBarbers();
+  const addBarber = useAddBarber();
+  const updateBarber = useUpdateBarber();
+  const deleteBarber = useDeleteBarber();
+  const toggleActiveMutation = useToggleBarberActive();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Barber | null>(null);
@@ -37,50 +43,62 @@ const BarbersPage = () => {
     setEditingBarber(b);
     setFormName(b.name);
     setFormPhone(b.phone);
-    setFormEmail(b.email);
+    setFormEmail(b.email || '');
     setFormCommission(String(b.commission));
     setDrawerOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formName.trim() || !formPhone.trim()) {
       popup.error('Nome e telefone são obrigatórios');
       return;
     }
-    if (editingBarber) {
-      setBarbers(prev => prev.map(b =>
-        b.id === editingBarber.id
-          ? { ...b, name: formName, phone: formPhone, email: formEmail, commission: Number(formCommission) }
-          : b
-      ));
-      popup.success('Barbeiro atualizado!');
-    } else {
-      const newBarber: Barber = {
-        id: `b-${Date.now()}`,
-        name: formName,
-        phone: formPhone,
-        email: formEmail,
-        commission: Number(formCommission),
-        active: true,
-      };
-      setBarbers(prev => [...prev, newBarber]);
-      popup.success('Barbeiro cadastrado!');
+    
+    try {
+      if (editingBarber) {
+        await updateBarber.mutateAsync({
+          id: editingBarber.id,
+          name: formName,
+          phone: formPhone,
+          email: formEmail,
+          commission: Number(formCommission)
+        });
+        popup.success('Barbeiro atualizado!');
+      } else {
+        await addBarber.mutateAsync({
+          name: formName,
+          phone: formPhone,
+          email: formEmail,
+          commission: Number(formCommission),
+          active: true,
+        });
+        popup.success('Barbeiro cadastrado!');
+      }
+      setDrawerOpen(false);
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao salvar barbeiro');
     }
-    setDrawerOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteTarget) {
-      setBarbers(prev => prev.filter(b => b.id !== deleteTarget.id));
-      popup.success('Barbeiro removido');
-      setDeleteTarget(null);
+      try {
+        await deleteBarber.mutateAsync(deleteTarget.id);
+        popup.success('Barbeiro removido');
+        setDeleteTarget(null);
+      } catch (err: any) {
+        popup.error(err.message || 'Erro ao excluir barbeiro');
+      }
     }
   };
 
-  const toggleActive = (id: string) => {
-    setBarbers(prev => prev.map(b =>
-      b.id === id ? { ...b, active: !b.active } : b
-    ));
+  const toggleActive = async (id: string, currentActive: boolean) => {
+    try {
+      await toggleActiveMutation.mutateAsync({ id, active: !currentActive });
+      popup.success(currentActive ? 'Barbeiro desativado' : 'Barbeiro ativado');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao alterar status');
+    }
   };
 
   return (
@@ -101,72 +119,86 @@ const BarbersPage = () => {
         </div>
 
         <div className="space-y-3">
-          <AnimatePresence>
-            {barbers.map((barber) => (
-              <motion.div
-                key={barber.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                className={`obsidian-card ${!barber.active ? 'opacity-50' : ''}`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-lg font-bold text-foreground">{barber.name}</p>
-                      {barber.active ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">Ativo</span>
-                      ) : (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive">Inativo</span>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground">Carregando equipe...</p>
+            </div>
+          ) : barbers.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-sm text-muted-foreground">Nenhum barbeiro cadastrado</p>
+              <Button variant="ghost" onClick={openAdd} className="mt-2 text-primary">
+                Cadastrar primeiro barbeiro
+              </Button>
+            </div>
+          ) : (
+            <AnimatePresence>
+              {barbers.map((barber) => (
+                <motion.div
+                  key={barber.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -100 }}
+                  className={`obsidian-card ${!barber.active ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-lg font-bold text-foreground">{barber.name}</p>
+                        {barber.active ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">Ativo</span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive">Inativo</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" strokeWidth={1.5} />{barber.phone}</span>
+                      </div>
+                      {barber.email && (
+                        <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
+                          <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />{barber.email}
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" strokeWidth={1.5} />{barber.phone}</span>
-                    </div>
-                    {barber.email && (
-                      <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
-                        <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />{barber.email}
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 gold-text">
+                        <Percent className="w-4 h-4" strokeWidth={1.5} />
+                        <span className="text-2xl font-bold font-mono-tabular">{barber.commission}</span>
                       </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 gold-text">
-                      <Percent className="w-4 h-4" strokeWidth={1.5} />
-                      <span className="text-2xl font-bold font-mono-tabular">{barber.commission}</span>
+                      <p className="text-xs uppercase tracking-ultra text-muted-foreground">Comissão</p>
                     </div>
-                    <p className="text-xs uppercase tracking-ultra text-muted-foreground">Comissão</p>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 pt-3 border-t border-border">
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => toggleActive(barber.id)}
-                    className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1.5 text-sm bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {barber.active ? <UserX className="w-4 h-4" strokeWidth={1.5} /> : <UserCheck className="w-4 h-4" strokeWidth={1.5} />}
-                    {barber.active ? 'Desativar' : 'Ativar'}
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => openEdit(barber)}
-                    className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1.5 text-sm bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" strokeWidth={1.5} />
-                    Editar
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setDeleteTarget(barber)}
-                    className="h-9 w-9 rounded-lg flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                  <div className="flex items-center gap-2 pt-3 border-t border-border">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => toggleActive(barber.id, barber.active)}
+                      className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1.5 text-sm bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {barber.active ? <UserX className="w-4 h-4" strokeWidth={1.5} /> : <UserCheck className="w-4 h-4" strokeWidth={1.5} />}
+                      {barber.active ? 'Desativar' : 'Ativar'}
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => openEdit(barber)}
+                      className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1.5 text-sm bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" strokeWidth={1.5} />
+                      Editar
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setDeleteTarget(barber)}
+                      className="h-9 w-9 rounded-lg flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
         </div>
       </div>
 

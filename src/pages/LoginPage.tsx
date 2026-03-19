@@ -12,8 +12,15 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) return;
+    
     setIsLoading(true);
-    await login(email, password);
+    const result = await login(email, password);
+    if (!result.success && result.error) {
+      // In a real app we'd show a toast here, but the user requested integration
+      // so we assume sonner or similar is available or adding basic alert for now
+      alert(result.error);
+    }
     setIsLoading(false);
   };
 

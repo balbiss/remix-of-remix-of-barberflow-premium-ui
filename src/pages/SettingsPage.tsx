@@ -1,53 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Save, Edit2, Check, Smartphone } from 'lucide-react';
+import { MessageCircle, Save, Edit2, Check, Smartphone, Loader2 } from 'lucide-react';
 import { usePopup } from '@/contexts/PopupContext';
-
-interface MessageTemplate {
-  id: string;
-  label: string;
-  description: string;
-  template: string;
-  active: boolean;
-}
-
-const defaultTemplates: MessageTemplate[] = [
-  {
-    id: 't1',
-    label: 'Boas-vindas',
-    description: 'Enviada ao cadastrar novo cliente',
-    template: 'Olá {nome}! Bem-vindo à {barbearia}. Estamos felizes em ter você como cliente! ✂️',
-    active: true,
-  },
-  {
-    id: 't2',
-    label: 'Fidelidade',
-    description: 'Quando completar o cartão fidelidade',
-    template: 'Parabéns {nome}! 🎉 Você completou seu cartão fidelidade na {barbearia}! Seu próximo corte é por nossa conta!',
-    active: true,
-  },
-  {
-    id: 't3',
-    label: 'Saudade',
-    description: 'Cliente sem visita há 30 dias',
-    template: 'Fala {nome}! Faz tempo que não te vemos na {barbearia}. Bora dar aquele trato no visual? 💈',
-    active: false,
-  },
-];
+import { useMessageTemplates, useUpdateMessageTemplate, MessageTemplate } from '@/hooks/useMessageTemplates';
+import { useBarbershop, useUpdateBarbershop } from '@/hooks/useBarbershop';
 
 const SettingsPage = () => {
   const popup = usePopup();
+  const { data: templates = [], isLoading: loadingTemplates } = useMessageTemplates();
+  const updateTemplateMut = useUpdateMessageTemplate();
+  const { data: barbershop, isLoading: loadingBarbershop } = useBarbershop();
+  const updateBarbershopMut = useUpdateBarbershop();
+
   const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [templates, setTemplates] = useState<MessageTemplate[]>(defaultTemplates);
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
 
-  const handleSaveNumber = () => {
+  useEffect(() => {
+    if (barbershop?.whatsapp_number) {
+      setWhatsappNumber(barbershop.whatsapp_number);
+    }
+  }, [barbershop]);
+
+  const handleSaveNumber = async () => {
     if (!whatsappNumber.trim()) {
       popup.error('Informe o número do WhatsApp');
       return;
     }
-    popup.success('Número do WhatsApp salvo!');
+    try {
+      await updateBarbershopMut.mutateAsync({ whatsapp_number: whatsappNumber });
+      popup.success('Número do WhatsApp salvo!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao salvar número');
+    }
   };
 
   const startEditTemplate = (t: MessageTemplate) => {
@@ -55,18 +40,23 @@ const SettingsPage = () => {
     setEditText(t.template);
   };
 
-  const saveTemplate = (id: string) => {
-    setTemplates(prev => prev.map(t =>
-      t.id === id ? { ...t, template: editText } : t
-    ));
-    setEditingTemplate(null);
-    popup.success('Template atualizado!');
+  const saveTemplate = async (id: string) => {
+    try {
+      await updateTemplateMut.mutateAsync({ id, template: editText });
+      setEditingTemplate(null);
+      popup.success('Template atualizado!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao salvar template');
+    }
   };
 
-  const toggleTemplate = (id: string) => {
-    setTemplates(prev => prev.map(t =>
-      t.id === id ? { ...t, active: !t.active } : t
-    ));
+  const toggleTemplate = async (id: string, active: boolean) => {
+    try {
+      await updateTemplateMut.mutateAsync({ id, active: !active });
+      popup.success(active ? 'Desativado' : 'Ativado');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao alterar status');
+    }
   };
 
   return (
@@ -129,7 +119,12 @@ const SettingsPage = () => {
           </p>
 
           <div className="space-y-3">
-            {templates.map(t => (
+            {loadingTemplates ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Carregando templates...</p>
+              </div>
+            ) : templates.map(t => (
               <div key={t.id} className="obsidian-card">
                 <div className="flex items-start justify-between mb-2">
                   <div>
@@ -138,7 +133,7 @@ const SettingsPage = () => {
                   </div>
                   <motion.button
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => toggleTemplate(t.id)}
+                    onClick={() => toggleTemplate(t.id, t.active)}
                     className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${
                       t.active ? 'bg-primary' : 'bg-secondary'
                     }`}

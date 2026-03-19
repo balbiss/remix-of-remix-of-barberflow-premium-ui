@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { serviceSuggestions, mockClients, CompletedService } from '@/data/mockData';
+import { serviceSuggestions } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClients } from '@/hooks/useClients';
+import { useAddCompletedService } from '@/hooks/useCompletedServices';
 import PinValidation from '@/components/PinValidation';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { usePopup } from '@/contexts/PopupContext';
 
 const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
@@ -22,13 +24,16 @@ const parseCurrency = (value: string) => {
 const RegisterPage = () => {
   const { user } = useAuth();
   const popup = usePopup();
+  const { data: clients = [], isLoading: loadingClients } = useClients();
+  const addCompletedService = useAddCompletedService();
+
   const [selectedClient, setSelectedClient] = useState('');
   const [serviceName, setServiceName] = useState('');
   const [serviceValue, setServiceValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
-  const [completedList, setCompletedList] = useState<CompletedService[]>([]);
+  const [completedList, setCompletedList] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredSuggestions = serviceSuggestions.filter(s =>
@@ -45,27 +50,39 @@ const RegisterPage = () => {
     setShowPin(true);
   };
 
-  const handleValidated = () => {
-    const client = mockClients.find(c => c.id === selectedClient)!;
+  const handleValidated = async () => {
+    const client = clients.find(c => c.id === selectedClient)!;
     const price = parseCurrency(serviceValue);
-    const newEntry: CompletedService = {
-      id: `cs-${Date.now()}`,
-      clientName: client.name,
-      serviceName,
-      servicePrice: price,
-      barberId: user?.id || '2',
-      barberName: user?.name || 'Barbeiro',
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      validated: true,
-      loyaltyPoints: 1,
-    };
-    setCompletedList(prev => [newEntry, ...prev]);
-    setShowPin(false);
-    setSelectedClient('');
-    setServiceName('');
-    setServiceValue('');
-    popup.success('Atendimento validado com sucesso!');
+    
+    try {
+      const result = await addCompletedService.mutateAsync({
+        client_id: selectedClient,
+        service_name: serviceName,
+        service_price: price,
+        barber_id: user?.barberId || '',
+        loyalty_points: 1,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        validated: true,
+      });
+
+      const newEntry = {
+        id: result.id,
+        clientName: client.name,
+        serviceName,
+        servicePrice: price,
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setCompletedList(prev => [newEntry, ...prev]);
+      setShowPin(false);
+      setSelectedClient('');
+      setServiceName('');
+      setServiceValue('');
+      popup.success('Atendimento validado com sucesso!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao salvar atendimento');
+    }
   };
 
   return (
@@ -84,16 +101,23 @@ const RegisterPage = () => {
             <label className="text-sm uppercase tracking-ultra text-muted-foreground">Cliente</label>
             <div className="relative">
               <select
+                disabled={loadingClients}
                 value={selectedClient}
                 onChange={(e) => setSelectedClient(e.target.value)}
-                className="w-full h-12 px-4 pr-10 rounded-xl glass-input text-base text-foreground appearance-none focus:outline-none bg-secondary"
+                className="w-full h-12 px-4 pr-10 rounded-xl glass-input text-base text-foreground appearance-none focus:outline-none bg-secondary disabled:opacity-50"
               >
-                <option value="" className="bg-background text-muted-foreground">Selecione um cliente...</option>
-                {mockClients.map(c => (
+                <option value="" className="bg-background text-muted-foreground">
+                  {loadingClients ? 'Carregando clientes...' : 'Selecione um cliente...'}
+                </option>
+                {clients.map(c => (
                   <option key={c.id} value={c.id} className="bg-background text-foreground">{c.name}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" strokeWidth={1.5} />
+              {loadingClients ? (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+              ) : (
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" strokeWidth={1.5} />
+              )}
             </div>
           </div>
 
