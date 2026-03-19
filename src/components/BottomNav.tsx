@@ -35,8 +35,8 @@ const BottomNav = () => {
             onClick={() => navigate(item.path)}
             className={`bottom-nav-item ${isActive ? 'active' : ''}`}
           >
-            <item.icon className="w-6 h-6" strokeWidth={1.5} />
-            <span className="text-xs">{item.label}</span>
+            <item.icon className="w-5 h-5" strokeWidth={1.5} />
+            <span className="text-[10px] leading-tight">{item.label}</span>
             {isActive && (
               <motion.div
                 layoutId="nav-dot"

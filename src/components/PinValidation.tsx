@@ -123,7 +123,7 @@ const PinValidation = ({ open, pin, onSuccess, onClose }: PinValidationProps) =>
                 </div>
 
                 {/* Numpad */}
-                <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+                <div className="grid grid-cols-3 gap-2 w-full max-w-xs">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
                     <motion.button
                       key={n}

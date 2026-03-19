@@ -79,13 +79,15 @@ const ReportsPage = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="px-4 pt-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-display text-foreground">Relatórios</h1>
-            <p className="text-sm text-muted-foreground">Visão geral do desempenho</p>
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h1 className="text-2xl font-bold tracking-display text-foreground">Relatórios</h1>
+              <p className="text-sm text-muted-foreground">Visão geral do desempenho</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs text-muted-foreground">
               <Calendar className="w-4 h-4" strokeWidth={1.5} />
               Esta Semana
             </div>
