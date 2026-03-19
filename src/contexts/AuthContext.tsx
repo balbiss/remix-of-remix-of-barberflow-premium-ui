@@ -37,13 +37,21 @@ interface SignUpData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 async function loadUserProfile(supabaseUser: SupabaseUser): Promise<User | null> {
+  console.log('Loading profile for user:', supabaseUser.id);
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('*, barbershops:barbershop_id(id, name, subscription_status)')
+    .select('*, barbershops(id, name, subscription_status)')
     .eq('id', supabaseUser.id)
     .single();
 
-  if (error || !profile) return null;
+  if (error) {
+    console.error('Error loading profile:', error);
+    return null;
+  }
+  if (!profile) {
+    console.warn('No profile found for ID:', supabaseUser.id);
+    return null;
+  }
 
   const barbershop = profile.barbershops as any;
 
