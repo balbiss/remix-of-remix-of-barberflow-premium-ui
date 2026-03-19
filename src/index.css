@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 4%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 4%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 38 30% 20%;
+    --input: 0 0% 15%;
+    --ring: 38 92% 50%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 38 30% 20%;
+    --sidebar-ring: 38 92% 50%;
+
+    /* Custom tokens */
+    --gold-glow: 0 0 15px rgba(245, 158, 11, 0.5);
+    --gold-border: rgba(212, 175, 55, 0.2);
+    --surface-glass: rgba(255, 255, 255, 0.05);
+    --surface-glass-border: rgba(255, 255, 255, 0.1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Geist Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .glass-surface {
+    @apply bg-black/40 backdrop-blur-xl border rounded-2xl;
+    border-color: var(--surface-glass-border);
+  }
+
+  .glass-input {
+    @apply border bg-white/5 transition-all duration-300;
+    border-color: var(--surface-glass-border);
+  }
+
+  .glass-input:focus {
+    border-color: hsl(38 92% 50% / 0.5);
+    box-shadow: 0 0 20px hsl(38 92% 50% / 0.1);
+  }
+
+  .gold-gradient-btn {
+    @apply font-bold uppercase tracking-widest text-sm;
+    background: linear-gradient(to bottom, hsl(38 80% 55%), hsl(38 92% 42%));
+    color: hsl(0 0% 4%);
+  }
+
+  .gold-gradient-btn:hover {
+    background: linear-gradient(to bottom, hsl(38 80% 60%), hsl(38 92% 48%));
+  }
+
+  .gold-gradient-btn:active {
+    transform: scale(0.97);
+  }
+
+  .gold-text {
+    color: hsl(var(--primary));
+  }
+
+  .gold-border {
+    border-color: var(--gold-border);
+  }
+
+  .obsidian-card {
+    @apply rounded-2xl border p-4;
+    background: hsl(0 0% 8%);
+    border-color: var(--gold-border);
+  }
+
+  .stamp-empty {
+    @apply border-2 border-dashed rounded-full aspect-square flex items-center justify-center;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .stamp-filled {
+    @apply rounded-full aspect-square flex items-center justify-center border-none;
+    background: hsl(38 92% 50%);
+    box-shadow: var(--gold-glow);
+    transform: scale(1.1);
+  }
+
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 h-20 backdrop-blur-lg border-t flex items-center justify-around;
+    background: rgba(0, 0, 0, 0.85);
+    border-color: rgba(255, 255, 255, 0.05);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav-item {
+    @apply flex flex-col items-center gap-1 text-xs transition-colors;
+    color: hsl(0 0% 50%);
+  }
+
+  .bottom-nav-item.active {
+    color: hsl(38 92% 50%);
+  }
+
+  .bottom-nav-dot {
+    @apply w-1 h-1 rounded-full;
+    background: hsl(38 92% 50%);
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(0 0% 12%) 0%,
+      hsl(38 30% 20%) 50%,
+      hsl(0 0% 12%) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+}
+
+@layer utilities {
+  .font-mono-tabular {
+    font-family: 'Geist Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tracking-display {
+    letter-spacing: -0.05em;
+  }
+
+  .tracking-body {
+    letter-spacing: 0.01em;
+  }
+
+  .tracking-ultra {
+    letter-spacing: 0.2em;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 5px rgba(245, 158, 11, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.6); }
+}
