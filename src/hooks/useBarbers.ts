@@ -56,8 +56,19 @@ export function useAddBarber() {
           }
         });
 
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
+        if (error) {
+          console.error('Edge Function Error:', error);
+          // Tentar extrair a mensagem do corpo se for um erro de rede/http
+          try {
+            const body = await error.context?.json();
+            if (body?.error) throw new Error(body.error);
+          } catch (e) {
+            // Se não conseguir parsear, usa o erro original
+          }
+          throw error;
+        }
+
+        if (data?.error) throw new Error(data.error);
         return data;
       }
 
