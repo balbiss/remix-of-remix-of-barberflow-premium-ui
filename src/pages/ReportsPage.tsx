@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
 import { weeklyRevenue, teamMembers, mockCompletedServices, mockBarbers } from '@/data/mockData';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { Calendar, TrendingUp, Users, DollarSign, FileDown, ChevronDown } from 'lucide-react';
