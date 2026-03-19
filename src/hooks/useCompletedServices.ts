@@ -138,8 +138,9 @@ export function useUpdateCompletedService() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['completed-services', user?.barbershopId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', user?.barbershopId] });
+      // Invalida todas as queries que começam com 'completed-services' para garantir que filtros por data também sejam atualizados
+      queryClient.invalidateQueries({ queryKey: ['completed-services'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
 }
@@ -157,8 +158,9 @@ export function useDeleteCompletedService() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['completed-services', user?.barbershopId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', user?.barbershopId] });
+      // Invalida todas as queries que começam com 'completed-services'
+      queryClient.invalidateQueries({ queryKey: ['completed-services'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
 }

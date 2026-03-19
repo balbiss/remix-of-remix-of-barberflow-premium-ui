@@ -37,10 +37,18 @@ const OwnerDashboard = () => {
 
   const handleSaveEdit = async (id: string) => {
     try {
+      // Limpa o valor para garantir que seja um número válido (remove R$, espaços, etc e troca vírgula por ponto)
+      const cleanPrice = parseFloat(editPrice.replace(/[^\d,.-]/g, '').replace(',', '.'));
+      
+      if (isNaN(cleanPrice)) {
+        popup.error('Por favor, informe um valor válido');
+        return;
+      }
+
       await updateService.mutateAsync({ 
         id, 
         service_name: editName, 
-        service_price: parseFloat(editPrice.replace(',', '.')) 
+        service_price: cleanPrice
       });
       setEditingId(null);
       popup.success('Serviço atualizado!');
