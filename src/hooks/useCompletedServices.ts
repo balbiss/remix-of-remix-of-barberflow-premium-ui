@@ -124,3 +124,41 @@ export function useBarberDashboardStats(barberId?: string) {
     enabled: !!barberId,
   });
 }
+
+export function useUpdateCompletedService() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, service_name, service_price }: { id: string; service_name: string; service_price: number }) => {
+      const { error } = await supabase
+        .from('completed_services')
+        .update({ service_name, service_price })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['completed-services', user?.barbershopId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', user?.barbershopId] });
+    },
+  });
+}
+
+export function useDeleteCompletedService() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('completed_services')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['completed-services', user?.barbershopId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', user?.barbershopId] });
+    },
+  });
+}

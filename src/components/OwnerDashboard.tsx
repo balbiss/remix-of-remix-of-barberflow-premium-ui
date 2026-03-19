@@ -1,7 +1,9 @@
-import { motion } from 'framer-motion';
-import { DollarSign, TrendingUp, Users, Scissors, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { DollarSign, TrendingUp, Users, Scissors, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
-import { useDashboardStats, useCompletedServices } from '@/hooks/useCompletedServices';
+import { useDashboardStats, useCompletedServices, useUpdateCompletedService, useDeleteCompletedService } from '@/hooks/useCompletedServices';
+import { usePopup } from '@/contexts/PopupContext';
 
 const container = {
   hidden: {},
@@ -14,9 +16,48 @@ const item = {
 };
 
 const OwnerDashboard = () => {
+  const popup = usePopup();
   const { data: stats, isLoading: loadingStats } = useDashboardStats();
   const today = new Date().toISOString().split('T')[0];
   const { data: recentServices = [], isLoading: loadingServices } = useCompletedServices(today);
+  
+  const updateService = useUpdateCompletedService();
+  const deleteService = useDeleteCompletedService();
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const handleStartEdit = (s: any) => {
+    setEditingId(s.id);
+    setEditName(s.service_name);
+    setEditPrice(String(s.service_price));
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    try {
+      await updateService.mutateAsync({ 
+        id, 
+        service_name: editName, 
+        service_price: parseFloat(editPrice.replace(',', '.')) 
+      });
+      setEditingId(null);
+      popup.success('Serviço atualizado!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao atualizar');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteService.mutateAsync(id);
+      setDeleteTargetId(null);
+      popup.success('Serviço removido!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao remover');
+    }
+  };
 
   if (loadingStats) {
     return (
@@ -123,14 +164,109 @@ const OwnerDashboard = () => {
           ) : recentServices.length === 0 ? (
             <p className="text-sm text-center text-muted-foreground py-4">Nenhum atendimento hoje</p>
           ) : recentServices.slice(0, 5).map((s) => (
-            <div key={s.id} className="flex items-center justify-between border-b border-border/30 pb-3 last:border-0 last:pb-0">
-              <div>
-                <p className="text-base font-medium text-foreground">{s.client?.name}</p>
-                <p className="text-sm text-muted-foreground">{s.service_name} • {s.time}</p>
-              </div>
-              <p className="text-base font-mono-tabular gold-text font-bold">
-                R$ {s.service_price.toFixed(2)}
-              </p>
+            <div key={s.id} className="border-b border-border/30 last:border-0">
+              <AnimatePresence mode="wait">
+                {editingId === s.id ? (
+                  <motion.div
+                    key="edit"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="py-3 space-y-2"
+                  >
+                    <div className="flex gap-2">
+                      <input
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        placeholder="Serviço"
+                        className="flex-1 h-9 px-3 rounded-lg bg-secondary text-sm text-foreground focus:outline-none"
+                      />
+                      <input
+                        value={editPrice}
+                        onChange={e => setEditPrice(e.target.value)}
+                        placeholder="R$"
+                        className="w-20 h-9 px-3 rounded-lg bg-secondary text-sm text-foreground focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleSaveEdit(s.id)}
+                        disabled={updateService.isPending}
+                        className="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"
+                      >
+                        {updateService.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        Salvar
+                      </motion.button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="h-9 px-4 rounded-lg bg-secondary text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : deleteTargetId === s.id ? (
+                  <motion.div
+                    key="delete"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="py-3 space-y-2"
+                  >
+                    <p className="text-xs text-foreground text-center">Excluir <strong>{s.service_name}</strong> de <strong>{s.client?.name}</strong>?</p>
+                    <div className="flex gap-2">
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleDelete(s.id)}
+                        disabled={deleteService.isPending}
+                        className="flex-1 h-9 rounded-lg bg-destructive text-destructive-foreground text-sm font-bold flex items-center justify-center gap-1"
+                      >
+                        {deleteService.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        Confirmar
+                      </motion.button>
+                      <button
+                        onClick={() => setDeleteTargetId(null)}
+                        className="h-9 px-4 rounded-lg bg-secondary text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="view"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="py-3 flex items-center justify-between"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-medium text-foreground truncate">{s.client?.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{s.service_name} • {s.time}</p>
+                    </div>
+                    <div className="flex items-center gap-3 ml-3">
+                      <p className="text-base font-mono-tabular gold-text font-bold">
+                        R$ {s.service_price.toFixed(2)}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleStartEdit(s)}
+                          className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <button 
+                          onClick={() => setDeleteTargetId(s.id)}
+                          className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))}
         </div>

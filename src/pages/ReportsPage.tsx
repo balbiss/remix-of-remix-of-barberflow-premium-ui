@@ -1,25 +1,64 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCompletedServices } from '@/hooks/useCompletedServices';
+import { useCompletedServices, useUpdateCompletedService, useDeleteCompletedService } from '@/hooks/useCompletedServices';
 import { useBarbers } from '@/hooks/useBarbers';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { Calendar, TrendingUp, Users, DollarSign, FileDown, Loader2 } from 'lucide-react';
+import { Calendar, TrendingUp, Users, DollarSign, FileDown, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { usePopup } from '@/contexts/PopupContext';
 
 const ReportsPage = () => {
   const { role, user } = useAuth();
+  const popup = usePopup();
   const { data: allServices = [], isLoading: loadingServices } = useCompletedServices();
   const { data: barbers = [], isLoading: loadingBarbers } = useBarbers();
+  const updateService = useUpdateCompletedService();
+  const deleteService = useDeleteCompletedService();
   
   const [pdfFilter, setPdfFilter] = useState('all');
   const [showPdfOptions, setShowPdfOptions] = useState(false);
+  const [barberFilter, setBarberFilter] = useState('all');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   // Filter data based on role
   const services = role === 'barber' && user?.barberId
     ? allServices.filter(s => s.barber_id === user.barberId)
-    : allServices;
+    : barberFilter === 'all' ? allServices : allServices.filter(s => s.barber_id === barberFilter);
+
+  const handleStartEdit = (s: any) => {
+    setEditingId(s.id);
+    setEditName(s.service_name);
+    setEditPrice(String(s.service_price));
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    try {
+      await updateService.mutateAsync({ 
+        id, 
+        service_name: editName, 
+        service_price: parseFloat(editPrice.replace(',', '.')) 
+      });
+      setEditingId(null);
+      popup.success('Serviço atualizado!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao atualizar');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteService.mutateAsync(id);
+      setDeleteTargetId(null);
+      popup.success('Serviço removido!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao remover');
+    }
+  };
 
   const totalRevenue = services.reduce((sum, s) => sum + s.service_price, 0);
   const totalAtendimentos = services.length;
@@ -320,6 +359,137 @@ const ReportsPage = () => {
                   </span>
                 </div>
               ))}
+          </div>
+        </motion.div>
+        )}
+
+        {/* Services List - Owner only */}
+        {role === 'owner' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="obsidian-card mt-6"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm uppercase tracking-ultra text-muted-foreground font-bold">Atendimentos</p>
+            <select
+              value={barberFilter}
+              onChange={e => setBarberFilter(e.target.value)}
+              className="h-8 px-2 rounded-lg text-xs text-foreground bg-secondary border-none focus:outline-none"
+            >
+              <option value="all">Todos</option>
+              {barbers.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-0 divide-y divide-border/40">
+            {loadingServices ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : services.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum atendimento encontrado</p>
+            ) : services.map(s => (
+              <div key={s.id}>
+                <AnimatePresence mode="wait">
+                  {editingId === s.id ? (
+                    <motion.div
+                      key="edit"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="py-3 space-y-2"
+                    >
+                      <div className="flex gap-2">
+                        <input
+                          value={editName}
+                          onChange={e => setEditName(e.target.value)}
+                          placeholder="Nome do serviço"
+                          className="flex-1 h-9 px-3 rounded-lg bg-secondary text-sm text-foreground focus:outline-none"
+                        />
+                        <input
+                          value={editPrice}
+                          onChange={e => setEditPrice(e.target.value)}
+                          placeholder="Preço"
+                          className="w-24 h-9 px-3 rounded-lg bg-secondary text-sm text-foreground focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleSaveEdit(s.id)}
+                          disabled={updateService.isPending}
+                          className="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-1"
+                        >
+                          {updateService.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          Salvar
+                        </motion.button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="h-9 px-4 rounded-lg bg-secondary text-sm text-muted-foreground hover:text-foreground"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : deleteTargetId === s.id ? (
+                    <motion.div
+                      key="delete"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="py-3 space-y-2"
+                    >
+                      <p className="text-sm text-foreground">Excluir <strong>{s.service_name}</strong> de <strong>{s.client?.name}</strong>?</p>
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleDelete(s.id)}
+                          disabled={deleteService.isPending}
+                          className="flex-1 h-9 rounded-lg bg-destructive text-destructive-foreground text-sm font-bold flex items-center justify-center gap-1"
+                        >
+                          {deleteService.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          Confirmar
+                        </motion.button>
+                        <button
+                          onClick={() => setDeleteTargetId(null)}
+                          className="h-9 px-4 rounded-lg bg-secondary text-sm text-muted-foreground hover:text-foreground"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="view"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="py-3 flex items-center justify-between"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{s.service_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.client?.name || 'Cliente'} · {s.barber?.name || 'Barbeiro'} · {s.date}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 ml-3">
+                        <span className="text-sm font-mono-tabular font-bold gold-text">R$ {Number(s.service_price).toFixed(2)}</span>
+                        <button onClick={() => handleStartEdit(s)} className="text-muted-foreground hover:text-foreground transition-colors">
+                          <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                        <button onClick={() => setDeleteTargetId(s.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
           </div>
         </motion.div>
         )}
