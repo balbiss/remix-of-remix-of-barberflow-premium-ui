@@ -11,6 +11,7 @@ export interface User {
   role: UserRole;
   barbershopId: string;
   barbershopName: string;
+  subscriptionStatus: string;
   avatar?: string;
   barberId?: string; // barbers table id (for barber role)
 }
@@ -18,6 +19,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   role: UserRole;
+  subscriptionStatus: string;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -37,7 +39,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 async function loadUserProfile(supabaseUser: SupabaseUser): Promise<User | null> {
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('*, barbershops:barbershop_id(id, name)')
+    .select('*, barbershops:barbershop_id(id, name, subscription_status)')
     .eq('id', supabaseUser.id)
     .single();
 
@@ -62,6 +64,7 @@ async function loadUserProfile(supabaseUser: SupabaseUser): Promise<User | null>
     role: profile.role as UserRole,
     barbershopId: profile.barbershop_id,
     barbershopName: barbershop?.name || '',
+    subscriptionStatus: barbershop?.subscription_status || 'pending',
     avatar: profile.avatar_url || undefined,
     barberId,
   };
@@ -169,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       role: user?.role || 'barber',
+      subscriptionStatus: user?.subscriptionStatus || 'pending',
       isAuthenticated: !!user,
       isLoading,
       login,

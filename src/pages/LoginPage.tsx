@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Scissors, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 const LoginPage = () => {
   const { login } = useAuth();
@@ -128,10 +129,16 @@ const LoginPage = () => {
             </motion.button>
           </form>
 
-          <div className="mt-4 text-center">
-            <button className="text-sm text-muted-foreground hover:text-primary transition-colors">
+          <div className="mt-4 text-center space-y-2">
+            <button className="text-sm text-muted-foreground hover:text-primary transition-colors block w-full text-center">
               Esqueceu sua senha?
             </button>
+            <p className="text-sm text-muted-foreground">
+              Não tem uma conta?{' '}
+              <Link to="/signup" className="gold-text font-bold hover:underline transition-all">
+                Cadastre-se
+              </Link>
+            </p>
           </div>
         </motion.div>
 

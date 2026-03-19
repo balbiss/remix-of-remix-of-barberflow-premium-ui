@@ -5,12 +5,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PopupProvider } from "@/contexts/PopupContext";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
 import RegisterPage from "./pages/RegisterPage";
 import ClientsPage from "./pages/ClientsPage";
 import ReportsPage from "./pages/ReportsPage";
 import BarbersPage from "./pages/BarbersPage";
 import SettingsPage from "./pages/SettingsPage";
+import SubscriptionGuard from "./components/SubscriptionGuard";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
 import NotFound from "./pages/NotFound";
@@ -20,8 +22,9 @@ const queryClient = new QueryClient();
 const AuthenticatedLayout = () => {
   const { isAuthenticated, role } = useAuth();
   if (!isAuthenticated) return <Navigate to="/" replace />;
+  
   return (
-    <>
+    <SubscriptionGuard>
       <Routes>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -36,7 +39,7 @@ const AuthenticatedLayout = () => {
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       <BottomNav />
-    </>
+    </SubscriptionGuard>
   );
 };
 
@@ -58,6 +61,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+      <Route path="/signup" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
       <Route path="/*" element={<AuthenticatedLayout />} />
     </Routes>
   );
