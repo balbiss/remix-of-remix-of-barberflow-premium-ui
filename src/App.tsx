@@ -11,6 +11,7 @@ import ReportsPage from "./pages/ReportsPage";
 import BarbersPage from "./pages/BarbersPage";
 import SettingsPage from "./pages/SettingsPage";
 import BottomNav from "./components/BottomNav";
+import ScrollToTop from "./components/ScrollToTop";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
       <PopupProvider>
         <AuthProvider>
           <BrowserRouter>
+            <ScrollToTop />
             <AppRoutes />
           </BrowserRouter>
         </AuthProvider>
