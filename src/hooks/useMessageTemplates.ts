@@ -33,7 +33,7 @@ export function useMessageTemplates() {
   });
 }
 
-export function useUpdateTemplate() {
+export function useUpdateMessageTemplate() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
