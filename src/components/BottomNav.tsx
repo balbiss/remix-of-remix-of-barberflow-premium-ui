@@ -8,21 +8,21 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const { role } = useAuth();
 
-  const navItems = [
-    { icon: Home, label: 'Início', path: '/dashboard' },
-    { icon: PlusCircle, label: 'Registrar', path: '/register' },
-    { icon: Users, label: 'Clientes', path: '/clients' },
-    ...(role === 'owner'
-      ? [
-          { icon: Users2, label: 'Equipe', path: '/barbers' },
-          { icon: BarChart3, label: 'Relatórios', path: '/reports' },
-          { icon: Settings, label: 'Config', path: '/settings' },
-        ]
-      : [
-          { icon: BarChart3, label: 'Relatórios', path: '/reports' },
-        ]
-    ),
-  ];
+  const navItems = role === 'owner'
+    ? [
+        { icon: Home, label: 'Início', path: '/dashboard' },
+        { icon: Users, label: 'Clientes', path: '/clients' },
+        { icon: PlusCircle, label: 'Registrar', path: '/register' },
+        { icon: Users2, label: 'Equipe', path: '/barbers' },
+        { icon: BarChart3, label: 'Relatórios', path: '/reports' },
+        { icon: Settings, label: 'Config', path: '/settings' },
+      ]
+    : [
+        { icon: Home, label: 'Início', path: '/dashboard' },
+        { icon: Users, label: 'Clientes', path: '/clients' },
+        { icon: PlusCircle, label: 'Registrar', path: '/register' },
+        { icon: BarChart3, label: 'Relatórios', path: '/reports' },
+      ];
 
   return (
     <nav className="bottom-nav">
