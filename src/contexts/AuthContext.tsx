@@ -75,22 +75,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const profile = await loadUserProfile(session.user);
-        setUser(profile);
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const profile = await loadUserProfile(session.user);
+          setUser(profile);
+        }
+      } catch (err) {
+        console.error('Error in auth init:', err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    };
+
+    initAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (session?.user) {
-          const profile = await loadUserProfile(session.user);
-          setUser(profile);
-        } else {
+        try {
+          if (session?.user) {
+            const profile = await loadUserProfile(session.user);
+            setUser(profile);
+          } else {
+            setUser(null);
+          }
+        } catch (err) {
+          console.error('Error on auth change:', err);
           setUser(null);
         }
       }
@@ -100,67 +112,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    if (data.user) {
-      const profile = await loadUserProfile(data.user);
-      if (!profile) {
-        return { success: false, error: 'Perfil não encontrado. Contate o administrador.' };
+      if (error) {
+        return { success: false, error: 'Email ou senha inválidos' };
       }
-      setUser(profile);
-    }
 
-    return { success: true };
+      if (data.user) {
+        const profile = await loadUserProfile(data.user);
+        if (!profile) {
+          return { success: false, error: 'Perfil não encontrado. Contate o suporte.' };
+        }
+        setUser(profile);
+      }
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Ocorreu um erro ao entrar. Tente novamente.' };
+    }
   };
 
   const signUp = async (signUpData: SignUpData): Promise<{ success: boolean; error?: string }> => {
-    // 1. Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: signUpData.email,
-      password: signUpData.password,
-    });
-
-    if (authError || !authData.user) {
-      return { success: false, error: authError?.message || 'Erro ao criar conta' };
-    }
-
-    const userId = authData.user.id;
-
-    // 2. Create barbershop
-    const { data: barbershop, error: bsError } = await supabase
-      .from('barbershops')
-      .insert({ name: signUpData.barbershopName, owner_id: userId })
-      .select()
-      .single();
-
-    if (bsError || !barbershop) {
-      return { success: false, error: bsError?.message || 'Erro ao criar barbearia' };
-    }
-
-    // 3. Create profile
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: userId,
-        name: signUpData.name,
+    try {
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: signUpData.email,
-        role: 'owner',
-        barbershop_id: barbershop.id,
+        password: signUpData.password,
       });
 
-    if (profileError) {
-      return { success: false, error: profileError.message };
+      if (authError || !authData.user) {
+        return { success: false, error: authError?.message || 'Erro ao criar conta' };
+      }
+
+      const userId = authData.user.id;
+
+      // 2. Create barbershop
+      const { data: barbershop, error: bsError } = await supabase
+        .from('barbershops')
+        .insert({ name: signUpData.barbershopName, owner_id: userId })
+        .select()
+        .single();
+
+      if (bsError || !barbershop) {
+        return { success: false, error: 'Erro ao configurar sua barbearia' };
+      }
+
+      // 3. Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          name: signUpData.name,
+          email: signUpData.email,
+          role: 'owner',
+          barbershop_id: barbershop.id,
+        });
+
+      if (profileError) {
+        return { success: false, error: 'Erro ao criar seu perfil profissional' };
+      }
+
+      // Reload profile
+      const profile = await loadUserProfile(authData.user);
+      setUser(profile);
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Ocorreu um erro inesperado. Tente novamente.' };
     }
-
-    // Reload profile
-    const profile = await loadUserProfile(authData.user);
-    setUser(profile);
-
-    return { success: true };
   };
 
   const logout = async () => {
