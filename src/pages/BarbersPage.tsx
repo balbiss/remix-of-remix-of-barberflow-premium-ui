@@ -238,7 +238,7 @@ const BarbersPage = () => {
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[340px] rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Remover barbeiro?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -246,8 +246,8 @@ const BarbersPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel className="h-12 text-base">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="h-12 text-base bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Remover
             </AlertDialogAction>
           </AlertDialogFooter>
