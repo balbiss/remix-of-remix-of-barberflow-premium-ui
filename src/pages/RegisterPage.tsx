@@ -59,7 +59,7 @@ const RegisterPage = () => {
         client_id: selectedClient,
         service_name: serviceName,
         service_price: price,
-        barber_id: user?.barberId || '',
+        barber_id: user?.barberId || null,
         loyalty_points: 1,
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),

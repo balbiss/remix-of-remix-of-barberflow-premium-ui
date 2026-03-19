@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export interface CompletedService {
   id: string;
   barbershop_id: string;
-  barber_id: string;
+  barber_id: string | null;
   client_id: string;
   service_name: string;
   service_price: number;
