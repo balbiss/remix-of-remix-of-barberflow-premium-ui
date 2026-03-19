@@ -97,7 +97,7 @@ const PinValidation = ({ open, pin, onSuccess, onClose }: PinValidationProps) =>
                 </div>
 
                 {/* Show PIN */}
-                <div className="text-5xl font-mono-tabular font-bold tracking-widest text-foreground mb-2">
+                <div className="text-4xl font-mono-tabular font-bold tracking-widest text-foreground mb-2">
                   {pin.split('').join(' ')}
                 </div>
                 <p className="text-xs text-muted-foreground mb-6">
