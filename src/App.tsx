@@ -55,6 +55,7 @@ const App = () => (
       <PopupProvider>
         <AuthProvider>
           <BrowserRouter>
+            <ScrollToTop />
             <AppRoutes />
           </BrowserRouter>
         </AuthProvider>
