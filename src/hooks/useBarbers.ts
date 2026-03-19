@@ -40,11 +40,38 @@ export function useAddBarber() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (barber: Omit<Barber, 'id' | 'barbershop_id' | 'created_at'>) => {
+    mutationFn: async (barber: Omit<Barber, 'id' | 'barbershop_id' | 'created_at'> & { password?: string }) => {
       if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
+
+      // Se tiver senha, usamos a Edge Function para criar a conta de acesso também
+      if (barber.password) {
+        const { data, error } = await supabase.functions.invoke('create-barber', {
+          body: {
+            email: barber.email,
+            password: barber.password,
+            name: barber.name,
+            phone: barber.phone,
+            commission: barber.commission,
+            barbershopId: user.barbershopId
+          }
+        });
+
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+        return data;
+      }
+
+      // Fluxo antigo (apenas convite sem senha)
       const { data, error } = await supabase
         .from('barbers')
-        .insert({ ...barber, barbershop_id: user.barbershopId })
+        .insert({
+          name: barber.name,
+          phone: barber.phone,
+          email: barber.email,
+          commission: barber.commission,
+          active: true,
+          barbershop_id: user.barbershopId
+        })
         .select()
         .single();
       

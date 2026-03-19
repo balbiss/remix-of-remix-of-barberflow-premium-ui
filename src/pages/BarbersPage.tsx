@@ -29,6 +29,7 @@ const BarbersPage = () => {
   const [formPhone, setFormPhone] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formCommission, setFormCommission] = useState('45');
+  const [formPassword, setFormPassword] = useState('');
 
   const openAdd = () => {
     setEditingBarber(null);
@@ -36,6 +37,7 @@ const BarbersPage = () => {
     setFormPhone('');
     setFormEmail('');
     setFormCommission('45');
+    setFormPassword('');
     setDrawerOpen(true);
   };
 
@@ -71,6 +73,7 @@ const BarbersPage = () => {
           email: formEmail,
           commission: Number(formCommission),
           active: true,
+          password: formPassword || undefined,
         });
         popup.success('Barbeiro cadastrado!');
       }
@@ -235,7 +238,25 @@ const BarbersPage = () => {
                 placeholder="email@exemplo.com"
                 className="w-full h-12 px-4 rounded-xl glass-input text-base text-foreground bg-secondary focus:outline-none"
               />
+              <p className="text-[10px] leading-tight text-muted-foreground px-1">
+                Tip: Use o email que o barbeiro usará para acessar o painel.
+              </p>
             </div>
+            {!editingBarber && (
+              <div className="space-y-2">
+                <label className="text-sm uppercase tracking-ultra text-muted-foreground">Senha de Acesso (Opcional)</label>
+                <input
+                  type="text"
+                  value={formPassword}
+                  onChange={e => setFormPassword(e.target.value)}
+                  placeholder="Defina uma senha para o barbeiro"
+                  className="w-full h-12 px-4 rounded-xl glass-input text-base text-foreground bg-secondary focus:outline-none border-primary/20"
+                />
+                <p className="text-[10px] leading-tight text-primary px-1">
+                  Se preenchido, a conta será criada na hora e ele poderá logar imediatamente.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm uppercase tracking-ultra text-muted-foreground">Comissão (%)</label>
               <div className="relative">

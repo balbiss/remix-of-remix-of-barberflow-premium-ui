@@ -19,8 +19,8 @@ const SignupPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.barbershopName || !formData.password) {
-      setError('Preencha todos os campos');
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('Nome, email e senha são obrigatórios');
       return;
     }
     
@@ -120,9 +120,6 @@ const SignupPage = () => {
 
             {/* Barbershop Name */}
             <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-ultra text-muted-foreground flex items-center gap-2">
-                <Store className="w-3.5 h-3.5" /> Nome da Barbearia
-              </label>
               <input
                 type="text"
                 value={formData.barbershopName}
@@ -130,6 +127,9 @@ const SignupPage = () => {
                 placeholder="Ex: Barbearia do Centro"
                 className="w-full h-12 px-4 rounded-xl glass-input text-base text-foreground bg-secondary/50 focus:outline-none"
               />
+              <p className="text-[10px] text-muted-foreground/60 pl-1 mt-1">
+                Apenas para novos donos. Se você foi convidado, pode deixar em branco.
+              </p>
             </div>
 
             {/* Password */}

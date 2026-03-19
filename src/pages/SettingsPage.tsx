@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Save, Edit2, Check, Smartphone, Loader2 } from 'lucide-react';
+import { MessageCircle, Save, Edit2, Check, Smartphone, Loader2, Plus, Trash2, DollarSign } from 'lucide-react';
 import { usePopup } from '@/contexts/PopupContext';
 import { useMessageTemplates, useUpdateMessageTemplate, MessageTemplate } from '@/hooks/useMessageTemplates';
 import { useBarbershop, useUpdateBarbershop } from '@/hooks/useBarbershop';
+import { useServices, useAddService, useDeleteService } from '@/hooks/useServices';
 
 const SettingsPage = () => {
   const popup = usePopup();
@@ -11,10 +12,17 @@ const SettingsPage = () => {
   const updateTemplateMut = useUpdateMessageTemplate();
   const { data: barbershop, isLoading: loadingBarbershop } = useBarbershop();
   const updateBarbershopMut = useUpdateBarbershop();
+  const { data: services = [], isLoading: loadingServices } = useServices();
+  const addServiceMut = useAddService();
+  const deleteServiceMut = useDeleteService();
 
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+
+  // Service Form State
+  const [newServiceName, setNewServiceName] = useState('');
+  const [newServicePrice, setNewServicePrice] = useState('');
 
   useEffect(() => {
     if (barbershop?.whatsapp_number) {
@@ -32,6 +40,35 @@ const SettingsPage = () => {
       popup.success('Número do WhatsApp salvo!');
     } catch (err: any) {
       popup.error(err.message || 'Erro ao salvar número');
+    }
+  };
+
+  const handleAddService = async () => {
+    if (!newServiceName.trim()) {
+      popup.error('Informe o nome do serviço');
+      return;
+    }
+    try {
+      const price = newServicePrice ? parseFloat(newServicePrice.replace(',', '.')) : 0;
+      await addServiceMut.mutateAsync({
+        name: newServiceName,
+        default_price: price,
+        active: true
+      });
+      setNewServiceName('');
+      setNewServicePrice('');
+      popup.success('Serviço adicionado!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao adicionar serviço');
+    }
+  };
+
+  const handleDeleteService = async (id: string) => {
+    try {
+      await deleteServiceMut.mutateAsync(id);
+      popup.success('Serviço removido');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao remover serviço');
     }
   };
 
@@ -63,7 +100,7 @@ const SettingsPage = () => {
     <div className="min-h-screen bg-background pb-24">
       <div className="px-4 pt-6">
         <h1 className="text-2xl font-bold tracking-display text-foreground mb-1">Configurações</h1>
-        <p className="text-sm text-muted-foreground mb-6">WhatsApp e mensagens automáticas</p>
+        <p className="text-sm text-muted-foreground mb-6">Barbearia, WhatsApp e Mensagens</p>
 
         {/* WhatsApp Number */}
         <motion.div
@@ -95,16 +132,72 @@ const SettingsPage = () => {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleSaveNumber}
-              className="h-12 px-4 rounded-xl bg-primary text-primary-foreground flex items-center gap-1.5 text-sm font-bold"
+              className="h-12 px-4 rounded-xl bg-primary text-primary-foreground flex items-center gap-1.5 text-sm font-bold transition-all hover:brightness-110 active:scale-95 shadow-lg shadow-primary/20"
             >
               <Save className="w-4 h-4" strokeWidth={1.5} />
               Salvar
             </motion.button>
           </div>
+        </motion.div>
 
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-2 h-2 rounded-full bg-muted-foreground" />
-            <span>Integração real requer configuração de API (em breve)</span>
+        {/* Services Management */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-6"
+        >
+          <p className="text-sm uppercase tracking-ultra text-muted-foreground mb-3 font-bold">
+            Serviços Prestados
+          </p>
+          <div className="obsidian-card space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <div className="flex-1 min-w-[150px]">
+                <input
+                  value={newServiceName}
+                  onChange={e => setNewServiceName(e.target.value)}
+                  placeholder="Nome do serviço (ex: Corte)"
+                  className="w-full h-11 px-3 rounded-lg glass-input text-sm text-foreground bg-secondary focus:outline-none"
+                />
+              </div>
+              <div className="w-24">
+                <div className="relative">
+                  <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    value={newServicePrice}
+                    onChange={e => setNewServicePrice(e.target.value)}
+                    placeholder="0,00"
+                    className="w-full h-11 pl-6 pr-2 rounded-lg glass-input text-sm text-foreground bg-secondary focus:outline-none"
+                  />
+                </div>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleAddService}
+                className="h-11 px-4 rounded-lg bg-primary text-primary-foreground flex items-center gap-1 text-sm font-bold shadow-md shadow-primary/20 hover:brightness-110"
+              >
+                <Plus className="w-4 h-4" />
+                Add
+              </motion.button>
+            </div>
+
+            <div className="pt-2 divide-y divide-border/50">
+              {loadingServices ? (
+                 <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+              ) : services.length === 0 ? (
+                <p className="text-xs text-center text-muted-foreground py-2 italic">Nenhum serviço cadastrado.</p>
+              ) : services.map(s => (
+                <div key={s.id} className="flex items-center justify-between py-2 first:pt-0">
+                  <span className="text-sm font-medium text-foreground">{s.name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-mono-tabular text-muted-foreground">R$ {s.default_price?.toFixed(2)}</span>
+                    <button onClick={() => handleDeleteService(s.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                      <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </motion.div>
 
@@ -114,7 +207,7 @@ const SettingsPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <p className="text-sm uppercase tracking-ultra text-muted-foreground mb-3">
+          <p className="text-sm uppercase tracking-ultra text-muted-foreground mb-3 font-bold">
             Templates de Mensagens
           </p>
 

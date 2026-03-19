@@ -36,54 +36,67 @@ interface SignUpData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function loadUserProfile(supabaseUser: SupabaseUser): Promise<User | null> {
-  console.log('Iniciando carregamento de perfil:', supabaseUser.id);
+async function loadUserProfile(supabaseUser: SupabaseUser, retryCount = 0): Promise<User | null> {
+  console.log(`[Auth] Carregando perfil (${retryCount}):`, supabaseUser.id);
   
-  // 1. Buscar Perfil
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', supabaseUser.id)
-    .single();
-
-  if (profileError || !profile) {
-    console.error('Erro na consulta de perfil:', profileError);
-    return null;
-  }
-
-  // 2. Buscar Barbearia (Separado para evitar problemas de join/RLS)
-  const { data: barbershop, error: bsError } = await supabase
-    .from('barbershops')
-    .select('*')
-    .eq('id', profile.barbershop_id)
-    .single();
-
-  if (bsError || !barbershop) {
-    console.error('Erro na consulta de barbearia:', bsError);
-    return null;
-  }
-
-  let barberId: string | undefined;
-  if (profile.role === 'barber') {
-    const { data: barber } = await supabase
-      .from('barbers')
-      .select('id')
-      .eq('user_id', supabaseUser.id)
+  try {
+    // 1. Buscar Perfil
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', supabaseUser.id)
       .single();
-    barberId = barber?.id;
-  }
 
-  return {
-    id: supabaseUser.id,
-    name: profile.name,
-    email: profile.email,
-    role: profile.role as UserRole,
-    barbershopId: profile.barbershop_id,
-    barbershopName: barbershop.name || '',
-    subscriptionStatus: barbershop.subscription_status || 'pending',
-    avatar: profile.avatar_url || undefined,
-    barberId,
-  };
+    if (profileError || !profile) {
+      console.warn('[Auth] Perfil não encontrado:', profileError?.message);
+      
+      // Se for recém criado, tenta novamente após 1.5s
+      if (retryCount < 2) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        return loadUserProfile(supabaseUser, retryCount + 1);
+      }
+      return null;
+    }
+
+    // 2. Buscar Barbearia
+    const { data: barbershop, error: bsError } = await supabase
+      .from('barbershops')
+      .select('*')
+      .eq('id', profile.barbershop_id)
+      .single();
+
+    if (bsError || !barbershop) {
+      console.error('[Auth] Erro ao buscar barbearia:', bsError?.message);
+      return null;
+    }
+
+    let barberId: string | undefined;
+    if (profile.role === 'barber') {
+      const { data: barber } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', supabaseUser.id)
+        .maybeSingle(); // Usar maybeSingle para evitar erro se ainda não vinculado
+      barberId = barber?.id;
+    }
+
+    console.log('[Auth] Perfil carregado com sucesso:', profile.email);
+
+    return {
+      id: supabaseUser.id,
+      name: profile.name,
+      email: profile.email,
+      role: profile.role as UserRole,
+      barbershopId: profile.barbershop_id,
+      barbershopName: barbershop.name || '',
+      subscriptionStatus: barbershop.subscription_status || 'pending',
+      avatar: profile.avatar_url || undefined,
+      barberId,
+    };
+  } catch (err) {
+    console.error('[Auth] Erro inesperado em loadUserProfile:', err);
+    return null;
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -91,40 +104,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
+    let isInitialLoad = true;
+    let mounted = true;
+
+    // Timeout de segurança: 8 segundos para garantir que o loading suma
+    const timeoutId = setTimeout(() => {
+      if (mounted && isInitialLoad) {
+        console.warn('Auth timeout: Forçando encerramento do loading');
+        setIsLoading(false);
+      }
+    }, 8000);
+
+    const handleSession = async (session: Session | null) => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const profile = await loadUserProfile(session.user);
-          setUser(profile);
+          if (mounted) {
+            setUser(profile);
+            setIsLoading(false);
+            isInitialLoad = false;
+          }
+        } else {
+          if (mounted) {
+            setUser(null);
+            setIsLoading(false);
+            isInitialLoad = false;
+          }
         }
       } catch (err) {
-        console.error('Error in auth init:', err);
-      } finally {
-        setIsLoading(false);
+        console.error('Error handling session:', err);
+        if (mounted) {
+          setUser(null);
+          setIsLoading(false);
+          isInitialLoad = false;
+        }
       }
     };
 
-    initAuth();
+    // 1. Carregamento inicial direto
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) {
+        handleSession(session);
+      }
+    });
 
-    // Listen for auth changes
+    // 2. Ouvir mudanças de estado (Login/Logout/Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        try {
-          if (session?.user) {
-            const profile = await loadUserProfile(session.user);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
-        } catch (err) {
-          console.error('Error on auth change:', err);
-          setUser(null);
+        if (mounted) {
+          handleSession(session);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -151,7 +188,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (signUpData: SignUpData): Promise<{ success: boolean; error?: string }> => {
     try {
-      // 1. Create auth user
+      // 1. Verificar se o e-mail já foi pré-cadastrado como barbeiro (Case-insensitive)
+      const { data: invitedBarber, error: inviteError } = await supabase
+        .from('barbers')
+        .select('*, barbershops(name)')
+        .ilike('email', signUpData.email.trim())
+        .is('user_id', null)
+        .maybeSingle();
+
+      if (inviteError) {
+        console.error('Erro ao verificar convite de barbeiro:', inviteError);
+      }
+
+      // 2. Criar o usuário no Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: signUpData.email,
         password: signUpData.password,
@@ -162,34 +211,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userId = authData.user.id;
+      let role: UserRole = 'owner';
+      let barbershopId = '';
 
-      // 2. Create barbershop
-      const { data: barbershop, error: bsError } = await supabase
-        .from('barbershops')
-        .insert({ name: signUpData.barbershopName, owner_id: userId })
-        .select()
-        .single();
+      if (invitedBarber) {
+        // Fluxo de Barbeiro Convidado
+        role = 'barber';
+        barbershopId = invitedBarber.barbershop_id;
+        
+        // Atualizar o registro do barbeiro com o ID do usuário
+        await supabase
+          .from('barbers')
+          .update({ user_id: userId })
+          .eq('id', invitedBarber.id);
+      } else {
+        // Fluxo de Dono (Cria nova barbearia)
+        const { data: barbershop, error: bsError } = await supabase
+          .from('barbershops')
+          .insert({ name: signUpData.barbershopName || 'Minha Barbearia', owner_id: userId })
+          .select()
+          .single();
 
-      if (bsError || !barbershop) {
-        return { success: false, error: 'Erro ao configurar sua barbearia' };
+        if (bsError || !barbershop) {
+          return { success: false, error: 'Erro ao configurar sua barbearia' };
+        }
+        barbershopId = barbershop.id;
       }
 
-      // 3. Create profile
+      // 3. Criar Perfil
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
           id: userId,
           name: signUpData.name,
           email: signUpData.email,
-          role: 'owner',
-          barbershop_id: barbershop.id,
+          role: role,
+          barbershop_id: barbershopId,
         });
 
       if (profileError) {
         return { success: false, error: 'Erro ao criar seu perfil profissional' };
       }
 
-      // Reload profile
+      // Recarregar perfil
       const profile = await loadUserProfile(authData.user);
       setUser(profile);
 

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { serviceSuggestions } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useServices } from '@/hooks/useServices';
 import { useClients } from '@/hooks/useClients';
 import { useAddCompletedService } from '@/hooks/useCompletedServices';
 import PinValidation from '@/components/PinValidation';
@@ -10,7 +10,10 @@ import { usePopup } from '@/contexts/PopupContext';
 
 const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
 
-const formatCurrency = (value: string) => {
+const formatCurrency = (value: string | number) => {
+  if (typeof value === 'number') {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
   const numbers = value.replace(/\D/g, '');
   const amount = parseInt(numbers || '0', 10) / 100;
   return amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -25,6 +28,7 @@ const RegisterPage = () => {
   const { user } = useAuth();
   const popup = usePopup();
   const { data: clients = [], isLoading: loadingClients } = useClients();
+  const { data: services = [], isLoading: loadingServices } = useServices();
   const addCompletedService = useAddCompletedService();
 
   const [selectedClient, setSelectedClient] = useState('');
@@ -36,8 +40,8 @@ const RegisterPage = () => {
   const [completedList, setCompletedList] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filteredSuggestions = serviceSuggestions.filter(s =>
-    s.toLowerCase().includes(serviceName.toLowerCase()) && serviceName.length > 0
+  const filteredSuggestions = services.filter(s =>
+    s.name.toLowerCase().includes(serviceName.toLowerCase()) && serviceName.length > 0
   );
 
   const handleFinalize = () => {
@@ -147,16 +151,26 @@ const RegisterPage = () => {
                 >
                   {filteredSuggestions.map(s => (
                     <button
-                      key={s}
+                      key={s.id}
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
-                        setServiceName(s);
+                        setServiceName(s.name);
+                        if (s.default_price) {
+                          setServiceValue(formatCurrency(s.default_price));
+                        }
                         setShowSuggestions(false);
                       }}
-                      className="w-full px-4 py-3 text-left text-base text-foreground hover:bg-secondary transition-colors"
+                      className="w-full px-4 py-3 text-left text-base text-foreground hover:bg-secondary transition-colors group"
                     >
-                      {s}
+                      <div className="flex items-center justify-between">
+                        <span>{s.name}</span>
+                        {s.default_price && (
+                          <span className="text-xs text-muted-foreground group-hover:gold-text transition-colors">
+                            Sugestão: R$ {formatCurrency(s.default_price)}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </motion.div>

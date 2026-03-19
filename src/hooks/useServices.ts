@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -30,5 +30,68 @@ export function useServices() {
       return data as Service[];
     },
     enabled: !!barbershopId,
+  });
+}
+
+export function useAddService() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (service: Omit<Service, 'id' | 'barbershop_id' | 'created_at'>) => {
+      if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
+      const { data, error } = await supabase
+        .from('services')
+        .insert({ ...service, barbershop_id: user.barbershopId })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services', user?.barbershopId] });
+    },
+  });
+}
+
+export function useUpdateService() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (service: Partial<Service> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('services')
+        .update(service)
+        .eq('id', service.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services', user?.barbershopId] });
+    },
+  });
+}
+
+export function useDeleteService() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services', user?.barbershopId] });
+    },
   });
 }
