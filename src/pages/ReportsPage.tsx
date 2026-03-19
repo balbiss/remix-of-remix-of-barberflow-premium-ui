@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
 import { weeklyRevenue, teamMembers, mockCompletedServices, mockBarbers } from '@/data/mockData';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { Calendar, TrendingUp, Users, DollarSign, FileDown, ChevronDown } from 'lucide-react';
@@ -14,6 +15,7 @@ const serviceBreakdown = [
 ];
 
 const ReportsPage = () => {
+  const { role } = useAuth();
   const totalWeekly = weeklyRevenue.reduce((s, d) => s + d.value, 0);
   const totalServices = mockCompletedServices.length;
   const [pdfFilter, setPdfFilter] = useState('all');
@@ -91,6 +93,7 @@ const ReportsPage = () => {
               <Calendar className="w-4 h-4" strokeWidth={1.5} />
               Esta Semana
             </div>
+            {role === 'owner' && (
             <div className="relative">
               <motion.button
                 whileTap={{ scale: 0.95 }}
@@ -135,6 +138,7 @@ const ReportsPage = () => {
                 </motion.div>
               )}
             </div>
+            )}
           </div>
         </div>
 
