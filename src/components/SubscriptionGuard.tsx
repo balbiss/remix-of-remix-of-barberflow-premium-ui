@@ -73,22 +73,26 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
 
           <div className="flex flex-col gap-4">
             <motion.a
-              href="https://cakto.com.br/checkout/placeholder" // Placeholder for Cakto
-              target="_blank"
-              rel="noopener noreferrer"
-              whileTap={{ scale: 0.97 }}
-              className="w-full h-14 rounded-xl gold-gradient-btn text-base font-bold flex items-center justify-center gap-2"
-            >
-              <CreditCard className="w-5 h-5" />
-              Assinar Agora
-            </motion.a>
-            
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-            >
-              Já assinei? Clique aqui para verificar
-            </button>
+               href={`https://pay.cakto.com.br/B8BcHrY?email=${user?.email}&name=${user?.name}`}
+               target="_blank"
+               rel="noopener noreferrer"
+               whileTap={{ scale: 0.97 }}
+               className="w-full h-14 rounded-xl gold-gradient-btn text-base font-bold flex items-center justify-center gap-2"
+             >
+               <CreditCard className="w-5 h-5" />
+               Assinar Agora (R$ 59,90)
+             </motion.a>
+             
+             <button 
+               onClick={() => {
+                 // Force reload to check new status from Supabase
+                 window.location.reload();
+               }}
+               className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2 flex items-center justify-center gap-2"
+             >
+               <CheckCircle2 className="w-4 h-4 text-primary" />
+               Já assinei? Clique aqui para atualizar
+             </button>
           </div>
 
           <p className="mt-6 text-xs text-muted-foreground italic">
