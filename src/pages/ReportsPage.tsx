@@ -15,9 +15,18 @@ const serviceBreakdown = [
 ];
 
 const ReportsPage = () => {
-  const { role } = useAuth();
-  const totalWeekly = weeklyRevenue.reduce((s, d) => s + d.value, 0);
-  const totalServices = mockCompletedServices.length;
+  const { role, user } = useAuth();
+  
+  // Filter data based on role
+  const filteredServices = role === 'barber' && user
+    ? mockCompletedServices.filter(s => s.barberId === user.id)
+    : mockCompletedServices;
+  const filteredRevenue = role === 'barber' && user
+    ? filteredServices.reduce((s, srv) => s + srv.servicePrice, 0)
+    : weeklyRevenue.reduce((s, d) => s + d.value, 0);
+  
+  const totalWeekly = filteredRevenue;
+  const totalServices = filteredServices.length;
   const [pdfFilter, setPdfFilter] = useState('all');
   const [showPdfOptions, setShowPdfOptions] = useState(false);
 
