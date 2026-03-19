@@ -176,6 +176,7 @@ const ReportsPage = () => {
             <p className="text-2xl font-bold font-mono-tabular text-foreground">{totalServices}</p>
             <p className="text-xs uppercase tracking-ultra text-muted-foreground">Atendimentos</p>
           </div>
+          {role === 'owner' && (
           <div className="obsidian-card">
             <DollarSign className="w-5 h-5 gold-text mb-2" strokeWidth={1.5} />
             <p className="text-2xl font-bold font-mono-tabular text-foreground">
@@ -183,6 +184,7 @@ const ReportsPage = () => {
             </p>
             <p className="text-xs uppercase tracking-ultra text-muted-foreground">Comissões</p>
           </div>
+          )}
         </motion.div>
 
         {/* Revenue Chart */}
