@@ -93,6 +93,7 @@ const ReportsPage = () => {
               <Calendar className="w-4 h-4" strokeWidth={1.5} />
               Esta Semana
             </div>
+            {role === 'owner' && (
             <div className="relative">
               <motion.button
                 whileTap={{ scale: 0.95 }}
@@ -137,6 +138,7 @@ const ReportsPage = () => {
                 </motion.div>
               )}
             </div>
+            )}
           </div>
         </div>
 
