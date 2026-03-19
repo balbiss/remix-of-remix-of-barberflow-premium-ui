@@ -15,7 +15,7 @@ const BottomNav = () => {
         { icon: PlusCircle, label: 'Registrar', path: '/register' },
         { icon: Users2, label: 'Equipe', path: '/barbers' },
         { icon: BarChart3, label: 'Relatórios', path: '/reports' },
-        { icon: Settings, label: 'Config', path: '/settings' },
+        { icon: Settings, label: 'Ajustes', path: '/settings' },
       ]
     : [
         { icon: Home, label: 'Início', path: '/dashboard' },

@@ -40,7 +40,7 @@ export function useAddClient() {
 
   return useMutation({
     mutationFn: async (client: Omit<Client, 'id' | 'barbershop_id' | 'created_at'>) => {
-      if (!user?.barbershopId) throw new Error('No barbershop ID');
+      if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
       const { data, error } = await supabase
         .from('clients')
         .insert({ ...client, barbershop_id: user.barbershopId })

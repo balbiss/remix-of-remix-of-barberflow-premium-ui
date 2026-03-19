@@ -29,7 +29,7 @@ export function useUpdateBarbershop() {
 
   return useMutation({
     mutationFn: async (data: { whatsapp_number: string }) => {
-      if (!user?.barbershopId) throw new Error('No barbershop ID');
+      if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
       
       const { error } = await supabase
         .from('barbershops')

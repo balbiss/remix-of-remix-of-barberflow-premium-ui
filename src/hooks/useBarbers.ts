@@ -41,7 +41,7 @@ export function useAddBarber() {
 
   return useMutation({
     mutationFn: async (barber: Omit<Barber, 'id' | 'barbershop_id' | 'created_at'>) => {
-      if (!user?.barbershopId) throw new Error('No barbershop ID');
+      if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
       const { data, error } = await supabase
         .from('barbers')
         .insert({ ...barber, barbershop_id: user.barbershopId })

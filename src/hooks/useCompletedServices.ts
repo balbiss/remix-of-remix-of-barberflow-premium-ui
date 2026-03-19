@@ -52,7 +52,7 @@ export function useAddCompletedService() {
 
   return useMutation({
     mutationFn: async (service: Omit<CompletedService, 'id' | 'barbershop_id' | 'created_at'>) => {
-      if (!user?.barbershopId) throw new Error('No barbershop ID');
+      if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
       
       // 1. Insert completed service
       const { data, error } = await supabase
