@@ -15,6 +15,7 @@ const serviceBreakdown = [
 ];
 
 const ReportsPage = () => {
+  const { role } = useAuth();
   const totalWeekly = weeklyRevenue.reduce((s, d) => s + d.value, 0);
   const totalServices = mockCompletedServices.length;
   const [pdfFilter, setPdfFilter] = useState('all');
