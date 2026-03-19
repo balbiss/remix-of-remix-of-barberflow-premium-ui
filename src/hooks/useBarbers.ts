@@ -58,17 +58,19 @@ export function useAddBarber() {
 
         if (error) {
           console.error('Edge Function Error:', error);
-          // Tentar extrair a mensagem do corpo se for um erro de rede/http
+          let errorMessage = error.message;
           try {
             const body = await error.context?.json();
-            if (body?.error) throw new Error(body.error);
-          } catch (e) {
-            // Se não conseguir parsear, usa o erro original
-          }
-          throw error;
+            if (body?.error) errorMessage = body.error;
+          } catch (e) {}
+          throw new Error(errorMessage);
         }
 
-        if (data?.error) throw new Error(data.error);
+        // Agora verificamos se a função retornou success: false mesmo com status 200
+        if (data && data.success === false) {
+           throw new Error(data.error || 'Erro desconhecido na Edge Function');
+        }
+
         return data;
       }
 
