@@ -251,6 +251,7 @@ const ReportsPage = () => {
         </motion.div>
 
         {/* Team Ranking */}
+        {role === 'owner' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -287,6 +288,7 @@ const ReportsPage = () => {
               ))}
           </div>
         </motion.div>
+        )}
       </div>
     </div>
   );
