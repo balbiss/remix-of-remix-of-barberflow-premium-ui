@@ -15,9 +15,18 @@ const serviceBreakdown = [
 ];
 
 const ReportsPage = () => {
-  const { role } = useAuth();
-  const totalWeekly = weeklyRevenue.reduce((s, d) => s + d.value, 0);
-  const totalServices = mockCompletedServices.length;
+  const { role, user } = useAuth();
+  
+  // Filter data based on role
+  const filteredServices = role === 'barber' && user
+    ? mockCompletedServices.filter(s => s.barberId === user.id)
+    : mockCompletedServices;
+  const filteredRevenue = role === 'barber' && user
+    ? filteredServices.reduce((s, srv) => s + srv.servicePrice, 0)
+    : weeklyRevenue.reduce((s, d) => s + d.value, 0);
+  
+  const totalWeekly = filteredRevenue;
+  const totalServices = filteredServices.length;
   const [pdfFilter, setPdfFilter] = useState('all');
   const [showPdfOptions, setShowPdfOptions] = useState(false);
 
@@ -167,6 +176,7 @@ const ReportsPage = () => {
             <p className="text-2xl font-bold font-mono-tabular text-foreground">{totalServices}</p>
             <p className="text-xs uppercase tracking-ultra text-muted-foreground">Atendimentos</p>
           </div>
+          {role === 'owner' && (
           <div className="obsidian-card">
             <DollarSign className="w-5 h-5 gold-text mb-2" strokeWidth={1.5} />
             <p className="text-2xl font-bold font-mono-tabular text-foreground">
@@ -174,6 +184,7 @@ const ReportsPage = () => {
             </p>
             <p className="text-xs uppercase tracking-ultra text-muted-foreground">Comissões</p>
           </div>
+          )}
         </motion.div>
 
         {/* Revenue Chart */}
@@ -242,6 +253,7 @@ const ReportsPage = () => {
         </motion.div>
 
         {/* Team Ranking */}
+        {role === 'owner' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -278,6 +290,7 @@ const ReportsPage = () => {
               ))}
           </div>
         </motion.div>
+        )}
       </div>
     </div>
   );
