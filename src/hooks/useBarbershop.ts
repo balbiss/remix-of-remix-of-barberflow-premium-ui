@@ -28,7 +28,11 @@ export function useUpdateBarbershop() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { whatsapp_number: string }) => {
+    mutationFn: async (data: { 
+      whatsapp_number?: string;
+      loyalty_stamps_limit?: number;
+      loyalty_reward_name?: string;
+    }) => {
       if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
       
       const { error } = await supabase

@@ -4,10 +4,11 @@ import { Star, Gift } from 'lucide-react';
 interface LoyaltyCardProps {
   stamps: number;
   clientName: string;
+  total?: number;
+  rewardName?: string;
 }
 
-const LoyaltyCard = ({ stamps, clientName }: LoyaltyCardProps) => {
-  const total = 10;
+const LoyaltyCard = ({ stamps, clientName, total = 10, rewardName = 'Corte Grátis' }: LoyaltyCardProps) => {
   const isComplete = stamps >= total;
 
   return (
@@ -45,11 +46,11 @@ const LoyaltyCard = ({ stamps, clientName }: LoyaltyCardProps) => {
             transition={{ repeat: Infinity, duration: 2 }}
             className="text-sm font-bold gold-text uppercase tracking-ultra"
           >
-            🎉 Corte Grátis Disponível!
+            🎉 {rewardName} Disponível!
           </motion.p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            {stamps} de {total} — faltam {total - stamps} para o corte grátis
+            {stamps} de {total} — faltam {total - stamps} para o {rewardName.toLowerCase()}
           </p>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClients, useAddClient, useUpdateClient, useDeleteClient, Client } from '@/hooks/useClients';
 import LoyaltyCard from '@/components/LoyaltyCard';
+import { useBarbershop } from '@/hooks/useBarbershop';
 import { Search, Phone, Star, Plus, X, UserPlus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
@@ -11,6 +12,7 @@ import { usePopup } from '@/contexts/PopupContext';
 const ClientsPage = () => {
   const popup = usePopup();
   const { data: clients = [], isLoading } = useClients();
+  const { data: barbershop } = useBarbershop();
   const addClient = useAddClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
@@ -161,7 +163,12 @@ const ClientsPage = () => {
               exit={{ opacity: 0, height: 0 }}
               className="mb-6"
             >
-              <LoyaltyCard stamps={selectedClient.loyalty_stamps} clientName={selectedClient.name} />
+              <LoyaltyCard 
+                stamps={selectedClient.loyalty_stamps} 
+                clientName={selectedClient.name} 
+                total={barbershop?.loyalty_stamps_limit}
+                rewardName={barbershop?.loyalty_reward_name}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -220,7 +227,9 @@ const ClientsPage = () => {
                     <div className="text-right">
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 gold-text" strokeWidth={1.5} fill="hsl(38 92% 50%)" />
-                        <span className="text-sm font-mono-tabular gold-text">{client.loyalty_stamps}/10</span>
+                        <span className="text-sm font-mono-tabular gold-text">
+                          {client.loyalty_stamps}/{barbershop?.loyalty_stamps_limit || 10}
+                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         R$ {Number(client.total_spent).toLocaleString('pt-BR')}

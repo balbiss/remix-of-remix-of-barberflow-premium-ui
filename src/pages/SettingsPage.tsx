@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Save, Edit2, Check, Smartphone, Loader2, Plus, Trash2, DollarSign } from 'lucide-react';
+import { MessageCircle, Save, Edit2, Check, Smartphone, Loader2, Plus, Trash2, DollarSign, TrendingUp } from 'lucide-react';
 import { usePopup } from '@/contexts/PopupContext';
 import { useMessageTemplates, useUpdateMessageTemplate, MessageTemplate } from '@/hooks/useMessageTemplates';
 import { useBarbershop, useUpdateBarbershop } from '@/hooks/useBarbershop';
@@ -24,9 +24,15 @@ const SettingsPage = () => {
   const [newServiceName, setNewServiceName] = useState('');
   const [newServicePrice, setNewServicePrice] = useState('');
 
+  // Fidelity Rules State
+  const [loyaltyStampsLimit, setLoyaltyStampsLimit] = useState(10);
+  const [loyaltyRewardName, setLoyaltyRewardName] = useState('Corte Grátis');
+
   useEffect(() => {
-    if (barbershop?.whatsapp_number) {
-      setWhatsappNumber(barbershop.whatsapp_number);
+    if (barbershop) {
+      setWhatsappNumber(barbershop.whatsapp_number || '');
+      setLoyaltyStampsLimit(barbershop.loyalty_stamps_limit || 10);
+      setLoyaltyRewardName(barbershop.loyalty_reward_name || 'Corte Grátis');
     }
   }, [barbershop]);
 
@@ -40,6 +46,18 @@ const SettingsPage = () => {
       popup.success('Número do WhatsApp salvo!');
     } catch (err: any) {
       popup.error(err.message || 'Erro ao salvar número');
+    }
+  };
+
+  const handleSaveLoyalty = async () => {
+    try {
+      await updateBarbershopMut.mutateAsync({ 
+        loyalty_stamps_limit: loyaltyStampsLimit,
+        loyalty_reward_name: loyaltyRewardName
+      });
+      popup.success('Regras de fidelidade salvas!');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao salvar regras');
     }
   };
 
@@ -139,6 +157,62 @@ const SettingsPage = () => {
             </motion.button>
           </div>
         </motion.div>
+
+        {/* Fidelity Rules */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.02 }}
+          className="obsidian-card mb-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-orange-500" strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="text-base font-bold text-foreground">Programa de Fidelidade</p>
+              <p className="text-xs text-muted-foreground">Configurações de selos e prêmios</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-ultra text-muted-foreground font-bold ml-1">Selos para ganhar</label>
+                <input
+                  type="number"
+                  value={loyaltyStampsLimit}
+                  onChange={e => setLoyaltyStampsLimit(parseInt(e.target.value) || 0)}
+                  className="w-full h-11 px-4 rounded-lg glass-input text-sm text-foreground bg-secondary focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-ultra text-muted-foreground font-bold ml-1">Nome do Prêmio</label>
+                <input
+                  type="text"
+                  value={loyaltyRewardName}
+                  onChange={e => setLoyaltyRewardName(e.target.value)}
+                  placeholder="Ex: Corte Grátis"
+                  className="w-full h-11 px-4 rounded-lg glass-input text-sm text-foreground bg-secondary focus:outline-none"
+                />
+              </div>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSaveLoyalty}
+              disabled={updateBarbershopMut.isPending}
+              className="w-full h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-primary/20"
+            >
+              {updateBarbershopMut.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              Salvar Regras de Fidelidade
+            </motion.button>
+          </div>
+        </motion.div>
+
 
         {/* Services Management */}
         <motion.div
