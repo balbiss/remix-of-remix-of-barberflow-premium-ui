@@ -37,23 +37,31 @@ interface SignUpData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 async function loadUserProfile(supabaseUser: SupabaseUser): Promise<User | null> {
-  console.log('Loading profile for user:', supabaseUser.id);
-  const { data: profile, error } = await supabase
+  console.log('Iniciando carregamento de perfil:', supabaseUser.id);
+  
+  // 1. Buscar Perfil
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('*, barbershops(id, name, subscription_status)')
+    .select('*')
     .eq('id', supabaseUser.id)
     .single();
 
-  if (error) {
-    console.error('Error loading profile:', error);
-    return null;
-  }
-  if (!profile) {
-    console.warn('No profile found for ID:', supabaseUser.id);
+  if (profileError || !profile) {
+    console.error('Erro na consulta de perfil:', profileError);
     return null;
   }
 
-  const barbershop = profile.barbershops as any;
+  // 2. Buscar Barbearia (Separado para evitar problemas de join/RLS)
+  const { data: barbershop, error: bsError } = await supabase
+    .from('barbershops')
+    .select('*')
+    .eq('id', profile.barbershop_id)
+    .single();
+
+  if (bsError || !barbershop) {
+    console.error('Erro na consulta de barbearia:', bsError);
+    return null;
+  }
 
   let barberId: string | undefined;
   if (profile.role === 'barber') {
@@ -71,8 +79,8 @@ async function loadUserProfile(supabaseUser: SupabaseUser): Promise<User | null>
     email: profile.email,
     role: profile.role as UserRole,
     barbershopId: profile.barbershop_id,
-    barbershopName: barbershop?.name || '',
-    subscriptionStatus: barbershop?.subscription_status || 'pending',
+    barbershopName: barbershop.name || '',
+    subscriptionStatus: barbershop.subscription_status || 'pending',
     avatar: profile.avatar_url || undefined,
     barberId,
   };
