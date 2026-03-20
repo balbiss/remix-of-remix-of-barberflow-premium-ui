@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useServices } from '@/hooks/useServices';
-import { useClients } from '@/hooks/useClients';
+import { useClients, useAddClient } from '@/hooks/useClients';
 import { useAddCompletedService } from '@/hooks/useCompletedServices';
 import PinValidation from '@/components/PinValidation';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
@@ -29,10 +29,13 @@ const RegisterPage = () => {
   const { user } = useAuth();
   const popup = usePopup();
   const { data: clients = [], isLoading: loadingClients } = useClients();
+  const addClient = useAddClient();
   const { data: services = [], isLoading: loadingServices } = useServices();
   const addCompletedService = useAddCompletedService();
 
-  const [selectedClient, setSelectedClient] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [selectedClient, setSelectedClient] = useState(''); // Holds ID if existing client matches
   const [serviceName, setServiceName] = useState('');
   const [serviceValue, setServiceValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -43,13 +46,39 @@ const RegisterPage = () => {
   const [completedList, setCompletedList] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const formatPhone = (val: string) => {
+    let numbers = val.replace(/\D/g, '');
+    if (numbers.length > 11) numbers = numbers.slice(0, 11);
+    
+    if (numbers.length === 0) return '';
+    if (numbers.length <= 2) return `(${numbers}`;
+    if (numbers.length <= 6) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    if (numbers.length <= 10) return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setClientPhone(formatted);
+    
+    // Check if this phone belongs to a registered client
+    const existing = clients.find(c => c.phone === formatted);
+    if (existing) {
+      setClientName(existing.name);
+      setSelectedClient(existing.id);
+    } else {
+      setClientName('');
+      setSelectedClient('');
+    }
+  };
+
   const filteredSuggestions = services.filter(s =>
     s.name.toLowerCase().includes(serviceName.toLowerCase()) && serviceName.length > 0
   );
 
   const handleFinalize = async () => {
-    if (!selectedClient || !serviceName || parseCurrency(serviceValue) <= 0) {
-      popup.error('Preencha cliente, serviço e valor');
+    if (!clientPhone || !clientName || !serviceName || parseCurrency(serviceValue) <= 0) {
+      popup.error('Preencha os dados do cliente, serviço e valor');
       return;
     }
 
@@ -59,13 +88,34 @@ const RegisterPage = () => {
     }
 
     setIsSendingCode(true);
+    let currentClientId = selectedClient;
+
+    try {
+      if (!currentClientId) {
+        // Automatically create client
+        const newClient = await addClient.mutateAsync({
+          name: clientName.trim(),
+          phone: clientPhone,
+          loyalty_stamps: 0,
+          total_spent: 0,
+          last_visit: new Date().toISOString()
+        });
+        currentClientId = newClient.id;
+        setSelectedClient(currentClientId); // Sync state forward
+      }
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao cadastrar novo cliente automaticamente.');
+      setIsSendingCode(false);
+      return;
+    }
+
     const newPin = generatePin();
     setPin(newPin);
 
     // Try to send via WhatsApp
     const result = await whatsappService.sendValidationCode(
       user.barbershopId,
-      selectedClient,
+      currentClientId,
       newPin
     );
 
@@ -82,7 +132,8 @@ const RegisterPage = () => {
   };
 
   const handleValidated = async () => {
-    const client = clients.find(c => c.id === selectedClient)!;
+    // If the client was newly created during Finalize, selectedClient now has their ID!
+    const client = clients.find(c => c.id === selectedClient) || { name: clientName };
     const price = parseCurrency(serviceValue);
     
     try {
@@ -99,7 +150,7 @@ const RegisterPage = () => {
 
       const newEntry = {
         id: result.id,
-        clientName: client.name,
+        clientName: clientName,
         serviceName,
         servicePrice: price,
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -107,6 +158,8 @@ const RegisterPage = () => {
 
       setCompletedList(prev => [newEntry, ...prev]);
       setShowPin(false);
+      setClientPhone('');
+      setClientName('');
       setSelectedClient('');
       setServiceName('');
       setServiceValue('');
@@ -117,17 +170,38 @@ const RegisterPage = () => {
   };
 
   const handleRegisterWithoutPoints = async () => {
-    if (!selectedClient || !serviceName || parseCurrency(serviceValue) <= 0) {
-      popup.error('Preencha cliente, serviço e valor');
+    if (!clientPhone || !clientName || !serviceName || parseCurrency(serviceValue) <= 0) {
+      popup.error('Preencha os dados do cliente, serviço e valor');
       return;
     }
 
-    const client = clients.find(c => c.id === selectedClient)!;
+    setIsSendingCode(true);
+    let currentClientId = selectedClient;
+
+    try {
+      if (!currentClientId) {
+        // Automatically create client
+        const newClient = await addClient.mutateAsync({
+          name: clientName.trim(),
+          phone: clientPhone,
+          loyalty_stamps: 0,
+          total_spent: 0,
+          last_visit: new Date().toISOString()
+        });
+        currentClientId = newClient.id;
+        setSelectedClient(currentClientId);
+      }
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao cadastrar novo cliente automaticamente.');
+      setIsSendingCode(false);
+      return;
+    }
+
     const price = parseCurrency(serviceValue);
     
     try {
       const result = await addCompletedService.mutateAsync({
-        client_id: selectedClient,
+        client_id: currentClientId,
         service_name: serviceName,
         service_price: price,
         barber_id: user?.barberId || null,
@@ -147,11 +221,15 @@ const RegisterPage = () => {
 
       setCompletedList(prev => [newEntry, ...prev]);
       setShowPin(false);
+      setClientPhone('');
+      setClientName('');
       setSelectedClient('');
       setServiceName('');
       setServiceValue('');
+      setIsSendingCode(false);
       popup.success('Atendimento registrado sem pontos.');
     } catch (err: any) {
+      setIsSendingCode(false);
       popup.error(err.message || 'Erro ao salvar atendimento');
     }
   };
@@ -167,28 +245,30 @@ const RegisterPage = () => {
         </p>
 
         <div className="space-y-4 mb-6">
-          {/* Client Select */}
-          <div className="space-y-2">
-            <label className="text-sm uppercase tracking-ultra text-muted-foreground">Cliente</label>
-            <div className="relative">
-              <select
+          {/* Client Inputs (Phone + Name) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm uppercase tracking-ultra text-muted-foreground">Telefone (WhatsApp)</label>
+              <input
+                type="tel"
+                value={clientPhone}
+                onChange={handlePhoneChange}
                 disabled={loadingClients}
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                className="w-full h-12 px-4 pr-10 rounded-xl glass-input text-base text-foreground appearance-none focus:outline-none bg-secondary disabled:opacity-50"
-              >
-                <option value="" className="bg-background text-muted-foreground">
-                  {loadingClients ? 'Carregando clientes...' : 'Selecione um cliente...'}
-                </option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id} className="bg-background text-foreground">{c.name}</option>
-                ))}
-              </select>
-              {loadingClients ? (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
-              ) : (
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" strokeWidth={1.5} />
-              )}
+                placeholder="(11) 99999-9999"
+                className="w-full h-12 px-4 rounded-xl glass-input text-base text-foreground font-mono-tabular focus:outline-none bg-secondary disabled:opacity-50"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm uppercase tracking-ultra text-muted-foreground">Nome (Busca Automática)</label>
+              <input
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                disabled={!!selectedClient} // If a client matched the phone, name cannot be edited manually
+                placeholder={!!selectedClient ? "Cliente encontrado" : "Nome do novo cliente"}
+                className={`w-full h-12 px-4 rounded-xl glass-input text-base text-foreground focus:outline-none disabled:opacity-50 transition-colors ${!!selectedClient ? 'bg-primary/10 border-primary/20 text-primary font-medium' : 'bg-secondary'}`}
+              />
             </div>
           </div>
 
@@ -326,7 +406,7 @@ const RegisterPage = () => {
       <PinValidation
         open={showPin}
         pin={pin}
-        clientName={clients.find(c => c.id === selectedClient)?.name}
+        clientName={clientName}
         wasSentViaWhatsApp={wasSentViaWhatsApp}
         onSuccess={handleValidated}
         onClose={() => setShowPin(false)}
