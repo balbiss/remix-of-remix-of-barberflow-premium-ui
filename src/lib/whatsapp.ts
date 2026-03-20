@@ -8,6 +8,17 @@ export interface WuzapiStatus {
   phone_connected?: string;
 }
 
+export const formatWhatsAppNumber = (phone: string): string => {
+  let cleanPhone = phone.replace(/\D/g, '');
+  
+  // Se o número tiver 10 ou 11 dígitos, assumimos que é do Brasil e não tem DDI
+  if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+    cleanPhone = `55${cleanPhone}`;
+  }
+  
+  return cleanPhone;
+};
+
 const getHeaders = async (instanceToken?: string) => {
   const { data: { session } } = await supabase.auth.getSession();
   const headers: Record<string, string> = {
@@ -70,7 +81,7 @@ export const whatsappApi = {
   },
 
   getPairingCode: async (instanceToken: string, phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
+    const formattedPhone = formatWhatsAppNumber(phone);
 
     // Step 1: Connect to WhatsApp servers (required before pairphone)
     await whatsappApi.connectSession(instanceToken);
@@ -83,7 +94,7 @@ export const whatsappApi = {
     const response = await fetch(`${PROXY_URL}/session/pairphone`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ Phone: cleanPhone }),
+      body: JSON.stringify({ Phone: formattedPhone }),
     });
 
     if (!response.ok) {
@@ -121,12 +132,12 @@ export const whatsappApi = {
   },
 
   checkUser: async (instanceToken: string, phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
+    const formattedPhone = formatWhatsAppNumber(phone);
     const headers = await getHeaders(instanceToken);
     const response = await fetch(`${PROXY_URL}/user/check`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ Phone: [cleanPhone] }),
+      body: JSON.stringify({ Phone: [formattedPhone] }),
     });
 
     if (!response.ok) {
@@ -139,13 +150,13 @@ export const whatsappApi = {
   },
 
   sendText: async (instanceToken: string, number: string, text: string) => {
-    const cleanNumber = number.replace(/\D/g, '');
+    const formattedPhone = formatWhatsAppNumber(number);
     const headers = await getHeaders(instanceToken);
     const response = await fetch(`${PROXY_URL}/chat/send/text`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        Phone: cleanNumber,
+        Phone: formattedPhone,
         Body: text,
       }),
     });
