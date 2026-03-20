@@ -58,14 +58,7 @@ export const whatsappService = {
         message = message.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
       });
 
-      // 5. Check if Number has WhatsApp (User Request)
-      const hasWhatsApp = await whatsappApi.checkUser(barbershop.whatsapp_instance_token, client.phone);
-      if (!hasWhatsApp) {
-        console.warn(`Phone ${client.phone} is not on WhatsApp. Message not sent.`);
-        return;
-      }
-
-      // 6. Send
+      // 5. Send
       await whatsappApi.sendText(barbershop.whatsapp_instance_token, client.phone, message);
       console.log(`Message sent to ${client.phone}: ${message}`);
     } catch (err) {
@@ -101,16 +94,10 @@ export const whatsappService = {
         return { success: false, error: 'Cliente sem número de telefone cadastrado.' };
       }
 
-      // 3. Mount Message
+      // 4. Mount Message
       const message = `Seu código de validação de atendimento na barbearia *${barbershop.name}* é: *${pin}*\n\nInforme este código ao seu barbeiro para concluir o atendimento e garantir seus pontos de fidelidade!`;
 
-      // 4. Check if Number has WhatsApp
-      const hasWhatsApp = await whatsappApi.checkUser(barbershop.whatsapp_instance_token, client.phone);
-      if (!hasWhatsApp) {
-        return { success: false, error: 'O número de telefone do cliente não tem WhatsApp.' };
-      }
-
-      // 5. Send Message
+      // 5. Send Message (Skip checkUser to avoid Wuzapi 500 error)
       await whatsappApi.sendText(barbershop.whatsapp_instance_token, client.phone, message);
       console.log(`Validation code sent to ${client.phone}: ${pin}`);
       
