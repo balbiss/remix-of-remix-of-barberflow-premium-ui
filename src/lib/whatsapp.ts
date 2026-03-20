@@ -43,10 +43,26 @@ export const whatsappApi = {
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Erro ao criar instância no Wuzapi');
+      throw new Error(error.error || 'Erro ao criar instância');
     }
     
-    return response.json();
+    const result = await response.json();
+    return result.data; // Includes id, name, token
+  },
+
+  deleteInstance: async (instanceId: string) => {
+    const headers = await getHeaders();
+    const response = await fetch(`${PROXY_URL}/admin/users/${instanceId}/full`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erro ao excluir instância');
+    }
+    
+    return await response.json();
   },
 
   getPairingCode: async (instanceToken: string, phone: string) => {

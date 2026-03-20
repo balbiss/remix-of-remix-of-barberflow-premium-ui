@@ -44,7 +44,8 @@ export function useWhatsApp() {
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const name = instanceName || `Barbearia_${barbershop.name.replace(/\s+/g, '_')}_${barbershop.id.substring(0, 5)}`;
 
-      await whatsappApi.createInstance(name, token);
+      const result = await whatsappApi.createInstance(name, token);
+      const instanceId = result.id; // Get the hash ID from Wuzapi
 
       // Save to Supabase
       const { error } = await supabase
@@ -52,15 +53,45 @@ export function useWhatsApp() {
         .update({
           whatsapp_instance_token: token,
           whatsapp_instance_name: name,
+          whatsapp_instance_id: instanceId,
           whatsapp_status: 'disconnected'
         })
         .eq('id', barbershop.id);
 
       if (error) throw error;
-      return { token, name };
+      return { token, name, instanceId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['barbershop', barbershop?.id] });
+    },
+  });
+
+  const deleteInstance = useMutation({
+    mutationFn: async () => {
+      if (!barbershop?.whatsapp_instance_id) {
+        // If we don't have the internal ID, just clear Supabase anyway
+        console.warn('No instance ID found, clearing Supabase only');
+      } else {
+        await whatsappApi.deleteInstance(barbershop.whatsapp_instance_id);
+      }
+
+      // Clear from Supabase
+      const { error } = await supabase
+        .from('barbershops')
+        .update({
+          whatsapp_instance_token: null,
+          whatsapp_instance_name: null,
+          whatsapp_instance_id: null,
+          whatsapp_status: 'disconnected',
+          whatsapp_number: null
+        })
+        .eq('id', barbershop?.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['barbershop', barbershop?.id] });
+      queryClient.setQueryData(['whatsapp-status', barbershop?.id], null);
     },
   });
 
@@ -77,6 +108,7 @@ export function useWhatsApp() {
     status: statusQuery.data,
     loadingStatus: statusQuery.isLoading,
     createInstance,
+    deleteInstance,
     getPairingCode,
     isConfigured: !!barbershop?.whatsapp_instance_token,
   };

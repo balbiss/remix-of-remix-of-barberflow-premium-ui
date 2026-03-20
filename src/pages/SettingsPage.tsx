@@ -18,7 +18,7 @@ const SettingsPage = () => {
   const addServiceMut = useAddService();
   const deleteServiceMut = useDeleteService();
 
-  const { status, loadingStatus, createInstance, getPairingCode, isConfigured } = useWhatsApp();
+  const { status, loadingStatus, createInstance, deleteInstance, getPairingCode, isConfigured } = useWhatsApp();
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingPhone, setPairingPhone] = useState('');
   const [isPairing, setIsPairing] = useState(false);
@@ -97,6 +97,18 @@ const SettingsPage = () => {
       popup.success('Número do WhatsApp salvo!');
     } catch (err: any) {
       popup.error(err.message || 'Erro ao salvar número');
+    }
+  };
+
+  const handleDeleteInstance = async () => {
+    if (!window.confirm('Tem certeza que deseja desconectar e EXCLUIR esta instância permanentemente? Todos os dados da conexão serão apagados.')) return;
+    try {
+      await deleteInstance.mutateAsync();
+      popup.success('Instância excluída com sucesso.');
+      setPairingCode(null);
+      setShowPhoneForm(false);
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao excluir instância');
     }
   };
 
@@ -308,16 +320,33 @@ const SettingsPage = () => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-4 rounded-xl bg-green-500/5 border border-green-500/20">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                  {barbershop?.whatsapp_instance_name} (Ativo)
-                </span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-green-500/5 border border-green-500/20 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                    {barbershop?.whatsapp_instance_name} (Ativo)
+                  </span>
+                </div>
+                <p className="text-[10px] text-green-600 dark:text-green-500 uppercase tracking-widest font-black">
+                  Online
+                </p>
               </div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                Online
-              </p>
+              
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleDeleteInstance}
+                disabled={deleteInstance.isPending}
+                className="w-full h-10 rounded-lg border border-destructive/30 text-destructive text-[11px] uppercase tracking-wider font-bold hover:bg-destructive/10 transition-all flex items-center justify-center gap-2 group"
+              >
+                {deleteInstance.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5 group-hover:shake" />
+                )}
+                Desconectar e Excluir Instância
+              </motion.button>
             </div>
           )}
         </motion.div>
