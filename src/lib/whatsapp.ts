@@ -21,6 +21,18 @@ const getHeaders = async (instanceToken?: string) => {
 };
 
 export const whatsappApi = {
+  // Step 1 of pairing: connects to WhatsApp servers (required before pairphone)
+  connectSession: async (instanceToken: string) => {
+    const headers = await getHeaders(instanceToken);
+    const response = await fetch(`${PROXY_URL}/session/connect`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ Immediate: true }),
+    });
+    // We don't throw on error here since socket might already be connecting
+    return response.json().catch(() => ({}));
+  },
+
   createInstance: async (name: string, token: string) => {
     const headers = await getHeaders();
     const response = await fetch(`${PROXY_URL}/admin/users`, {
@@ -39,6 +51,14 @@ export const whatsappApi = {
 
   getPairingCode: async (instanceToken: string, phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
+
+    // Step 1: Connect to WhatsApp servers (required before pairphone)
+    await whatsappApi.connectSession(instanceToken);
+
+    // Wait a moment for the connection to establish
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Step 2: Get pairing code
     const headers = await getHeaders(instanceToken);
     const response = await fetch(`${PROXY_URL}/session/pairphone`, {
       method: 'POST',
@@ -47,8 +67,8 @@ export const whatsappApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erro ao gerar código de pareamento');
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `Erro ao gerar código (status ${response.status})`);
     }
 
     const data = await response.json();
