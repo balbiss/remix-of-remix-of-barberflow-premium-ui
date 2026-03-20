@@ -1,5 +1,6 @@
-const WUZAPI_URL = 'https://weeb.inoovaweb.com.br';
-const WUZAPI_ADMIN_TOKEN = '44507d94623ef3c92c7c8b908b786836';
+import { supabase } from './supabase';
+
+const PROXY_URL = 'https://oziqitfcquydsmzgxgsv.supabase.co/functions/v1/whatsapp-api';
 
 export interface WuzapiStatus {
   connected: boolean;
@@ -7,14 +8,24 @@ export interface WuzapiStatus {
   phone_connected?: string;
 }
 
+const getHeaders = async (instanceToken?: string) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Authorization': session ? `Bearer ${session.access_token}` : '',
+  };
+  if (instanceToken) {
+    headers['token'] = instanceToken;
+  }
+  return headers;
+};
+
 export const whatsappApi = {
   createInstance: async (name: string, token: string) => {
-    const response = await fetch(`${WUZAPI_URL}/admin/users`, {
+    const headers = await getHeaders();
+    const response = await fetch(`${PROXY_URL}/admin/users`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': WUZAPI_ADMIN_TOKEN,
-      },
+      headers,
       body: JSON.stringify({ name, token }),
     });
     
@@ -28,12 +39,10 @@ export const whatsappApi = {
 
   getPairingCode: async (instanceToken: string, phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
-    const response = await fetch(`${WUZAPI_URL}/session/pairphone`, {
+    const headers = await getHeaders(instanceToken);
+    const response = await fetch(`${PROXY_URL}/session/pairphone`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'token': instanceToken,
-      },
+      headers,
       body: JSON.stringify({ Phone: cleanPhone }),
     });
 
@@ -47,11 +56,10 @@ export const whatsappApi = {
   },
 
   getStatus: async (instanceToken: string): Promise<WuzapiStatus> => {
-    const response = await fetch(`${WUZAPI_URL}/session/status`, {
+    const headers = await getHeaders(instanceToken);
+    const response = await fetch(`${PROXY_URL}/session/status`, {
       method: 'GET',
-      headers: {
-        'token': instanceToken,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -61,18 +69,15 @@ export const whatsappApi = {
     const data = await response.json();
     return {
       connected: data.data?.Connected && data.data?.LoggedIn,
-      // Note: mapping case from API response (Connected, LoggedIn)
     };
   },
 
   checkUser: async (instanceToken: string, phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
-    const response = await fetch(`${WUZAPI_URL}/user/check`, {
+    const headers = await getHeaders(instanceToken);
+    const response = await fetch(`${PROXY_URL}/user/check`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'token': instanceToken,
-      },
+      headers,
       body: JSON.stringify({ Phone: [cleanPhone] }),
     });
 
@@ -87,12 +92,10 @@ export const whatsappApi = {
 
   sendText: async (instanceToken: string, number: string, text: string) => {
     const cleanNumber = number.replace(/\D/g, '');
-    const response = await fetch(`${WUZAPI_URL}/chat/send/text`, {
+    const headers = await getHeaders(instanceToken);
+    const response = await fetch(`${PROXY_URL}/chat/send/text`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'token': instanceToken,
-      },
+      headers,
       body: JSON.stringify({
         Phone: cleanNumber,
         Body: text,

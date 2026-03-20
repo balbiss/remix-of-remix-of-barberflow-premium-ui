@@ -22,11 +22,40 @@ const SettingsPage = () => {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingPhone, setPairingPhone] = useState('');
   const [isPairing, setIsPairing] = useState(false);
+  const [instanceNameInput, setInstanceNameInput] = useState('');
+  const [showPhoneForm, setShowPhoneForm] = useState(false);
+
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  // Service Form State
+  const [newServiceName, setNewServiceName] = useState('');
+  const [newServicePrice, setNewServicePrice] = useState('');
+
+  // Fidelity Rules State
+  const [loyaltyStampsLimit, setLoyaltyStampsLimit] = useState(10);
+  const [loyaltyRewardName, setLoyaltyRewardName] = useState('Corte Grátis');
+
+  useEffect(() => {
+    if (barbershop) {
+      setWhatsappNumber(barbershop.whatsapp_number || '');
+      setLoyaltyStampsLimit(barbershop.loyalty_stamps_limit || 10);
+      setLoyaltyRewardName(barbershop.loyalty_reward_name || 'Corte Grátis');
+      if (!instanceNameInput && barbershop.name) {
+        setInstanceNameInput(barbershop.name.replace(/\s+/g, '_'));
+      }
+    }
+  }, [barbershop]);
 
   const handleCreateInstance = async () => {
+    if (!instanceNameInput.trim()) {
+      popup.error('Informe um nome para a instância');
+      return;
+    }
     try {
-      await createInstance.mutateAsync();
-      popup.success('Instância criada! Agora você pode parear seu celular.');
+      await createInstance.mutateAsync(instanceNameInput);
+      popup.success('Instância criada! Agora você pode conectar seu WhatsApp.');
     } catch (err: any) {
       popup.error(err.message || 'Erro ao criar instância');
     }
@@ -48,26 +77,6 @@ const SettingsPage = () => {
       setIsPairing(false);
     }
   };
-
-  const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
-
-  // Service Form State
-  const [newServiceName, setNewServiceName] = useState('');
-  const [newServicePrice, setNewServicePrice] = useState('');
-
-  // Fidelity Rules State
-  const [loyaltyStampsLimit, setLoyaltyStampsLimit] = useState(10);
-  const [loyaltyRewardName, setLoyaltyRewardName] = useState('Corte Grátis');
-
-  useEffect(() => {
-    if (barbershop) {
-      setWhatsappNumber(barbershop.whatsapp_number || '');
-      setLoyaltyStampsLimit(barbershop.loyalty_stamps_limit || 10);
-      setLoyaltyRewardName(barbershop.loyalty_reward_name || 'Corte Grátis');
-    }
-  }, [barbershop]);
 
   const handleSaveNumber = async () => {
     if (!whatsappNumber.trim()) {
@@ -173,7 +182,7 @@ const SettingsPage = () => {
               <div>
                 <p className="text-base font-bold text-foreground">Status do WhatsApp</p>
                 <p className="text-xs text-muted-foreground">
-                  {status?.connected ? 'Conectado e pronto' : 'Desconectado'}
+                  {status?.connected ? 'Conectado e pronto' : 'Configuração pendente'}
                 </p>
               </div>
             </div>
@@ -183,72 +192,103 @@ const SettingsPage = () => {
           </div>
 
           {!isConfigured ? (
-            <div className="flex flex-col items-center justify-center py-4 text-center">
-              <p className="text-sm text-muted-foreground mb-4">
-                Sua instância ainda não foi configurada.
-              </p>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={handleCreateInstance}
-                disabled={createInstance.isPending}
-                className="h-11 px-6 rounded-xl bg-primary text-primary-foreground flex items-center gap-2 text-sm font-bold shadow-lg shadow-primary/20"
-              >
-                {createInstance.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                Configurar Canal
-              </motion.button>
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
+                <p className="text-xs font-medium text-muted-foreground mb-3">
+                  Passo 1: Nomeie sua instância
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={instanceNameInput}
+                    onChange={e => setInstanceNameInput(e.target.value)}
+                    placeholder="Ex: Minha_Barbearia"
+                    className="flex-1 h-11 px-4 rounded-lg glass-input text-sm text-foreground bg-background focus:outline-none"
+                  />
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleCreateInstance}
+                    disabled={createInstance.isPending}
+                    className="h-11 px-4 rounded-lg bg-primary text-primary-foreground flex items-center gap-2 text-sm font-bold shadow-lg shadow-primary/20"
+                  >
+                    {createInstance.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      'Criar'
+                    )}
+                  </motion.button>
+                </div>
+              </div>
             </div>
           ) : !status?.connected ? (
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
-                <p className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
-                  <Key className="w-3 h-3" />
-                  Conexão via Código de Pareamento
-                </p>
-                
-                {pairingCode ? (
-                  <div className="flex flex-col items-center gap-3 py-2">
-                    <div className="flex gap-2">
-                      {pairingCode.split('').map((char, i) => (
-                        <div key={i} className="w-8 h-10 rounded-lg bg-background border border-primary/30 flex items-center justify-center text-xl font-bold text-primary">
-                          {char}
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-center text-muted-foreground px-4 leading-relaxed">
-                      No seu WhatsApp: Configurações &gt; Aparelhos Conectados &gt; Conectar um aparelho &gt; Conectar com número de telefone.
-                    </p>
-                    <button 
-                      onClick={() => setPairingCode(null)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1 underline"
-                    >
-                      Gerar novo código
-                    </button>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-ultra text-muted-foreground font-bold">Instância Ativa</p>
+                    <p className="text-sm font-bold text-foreground">{barbershop?.whatsapp_instance_name}</p>
                   </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      value={pairingPhone}
-                      onChange={e => setPairingPhone(e.target.value)}
-                      placeholder="Ex: 5511999999999"
-                      className="flex-1 h-11 px-4 rounded-lg glass-input text-sm text-foreground bg-background focus:outline-none"
-                    />
-                    <motion.button
+                  {!showPhoneForm && (
+                     <motion.button
                       whileTap={{ scale: 0.95 }}
-                      onClick={handleGetPairingCode}
-                      disabled={isPairing}
-                      className="h-11 px-4 rounded-lg bg-primary text-primary-foreground flex items-center gap-2 text-sm font-bold"
+                      onClick={() => setShowPhoneForm(true)}
+                      className="h-9 px-4 rounded-lg bg-primary text-primary-foreground flex items-center gap-2 text-xs font-bold"
                     >
-                      {isPairing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        'Parear'
-                      )}
+                      <Smartphone className="w-3.5 h-3.5" />
+                      Conectar WhatsApp
                     </motion.button>
+                  )}
+                </div>
+                
+                {showPhoneForm && (
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
+                      <Key className="w-3 h-3" />
+                      Passo 2: Gerar Código de Pareamento
+                    </p>
+                    
+                    {pairingCode ? (
+                      <div className="flex flex-col items-center gap-3 py-2">
+                        <div className="grid grid-cols-8 gap-1.5">
+                          {pairingCode.replace('-', '').split('').map((char, i) => (
+                            <div key={i} className="w-8 h-10 rounded-lg bg-background border border-primary/30 flex items-center justify-center text-xl font-bold text-primary">
+                              {char}
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-center text-muted-foreground px-4 leading-relaxed mt-2">
+                          No seu WhatsApp: <span className="text-foreground font-bold">Aparelhos Conectados</span> &gt; <span className="text-foreground font-bold">Conectar um aparelho</span> &gt; <span className="text-foreground font-bold">Conectar com número de telefone</span>.
+                        </p>
+                        <button 
+                          onClick={() => setPairingCode(null)}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1 underline"
+                        >
+                          Tentar outro número
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          type="tel"
+                          value={pairingPhone}
+                          onChange={e => setPairingPhone(e.target.value)}
+                          placeholder="Ex: 5511999999999"
+                          className="flex-1 h-11 px-4 rounded-lg glass-input text-sm text-foreground bg-background focus:outline-none"
+                        />
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleGetPairingCode}
+                          disabled={isPairing}
+                          className="h-11 px-4 rounded-lg bg-primary text-primary-foreground flex items-center gap-2 text-sm font-bold"
+                        >
+                          {isPairing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            'Parear'
+                          )}
+                        </motion.button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -258,7 +298,7 @@ const SettingsPage = () => {
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                  {status.phone_connected || 'WhatsApp Ativo'}
+                  {barbershop?.whatsapp_instance_name} (Ativo)
                 </span>
               </div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
@@ -267,8 +307,6 @@ const SettingsPage = () => {
             </div>
           )}
         </motion.div>
-
-        {/* WhatsApp Number (Business Info) */}
 
         {/* Fidelity Rules */}
         <motion.div
@@ -324,7 +362,6 @@ const SettingsPage = () => {
             </motion.button>
           </div>
         </motion.div>
-
 
         {/* Services Management */}
         <motion.div

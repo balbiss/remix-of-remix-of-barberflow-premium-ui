@@ -37,12 +37,12 @@ export function useWhatsApp() {
   });
 
   const createInstance = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (instanceName: string) => {
       if (!barbershop) throw new Error('Barbearia não carregada');
       
       // Generate a random token for this instances
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const name = `Barbearia_${barbershop.name.replace(/\s+/g, '_')}_${barbershop.id.substring(0, 5)}`;
+      const name = instanceName || `Barbearia_${barbershop.name.replace(/\s+/g, '_')}_${barbershop.id.substring(0, 5)}`;
 
       await whatsappApi.createInstance(name, token);
 
