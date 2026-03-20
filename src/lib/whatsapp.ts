@@ -134,19 +134,23 @@ export const whatsappApi = {
   checkUser: async (instanceToken: string, phone: string) => {
     const formattedPhone = formatWhatsAppNumber(phone);
     const headers = await getHeaders(instanceToken);
-    const response = await fetch(`${PROXY_URL}/user/check`, {
-      method: 'POST',
+    const response = await fetch(`${PROXY_URL}/user/lid/${formattedPhone}`, {
+      method: 'GET',
       headers,
-      body: JSON.stringify({ Phone: [formattedPhone] }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erro ao verificar número no WhatsApp');
+      if (response.status === 404) {
+        // User not found on WhatsApp
+        return false;
+      }
+      const errorText = await response.text();
+      console.warn(`[Wuzapi] Error checking number /user/lid: ${errorText}`);
+      throw new Error('Erro ao verificar número no WhatsApp (verificação LID falhou)');
     }
 
     const result = await response.json();
-    return result.data?.Users?.[0]?.IsInWhatsapp || false;
+    return !!(result.jid); // If it returns JID, it's valid!
   },
 
   sendText: async (instanceToken: string, number: string, text: string) => {

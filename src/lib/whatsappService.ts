@@ -46,7 +46,7 @@ export const whatsappService = {
         return;
       }
 
-      // 4. Fill Template
+      // 4. Mount Message
       let message = template.template;
       const allVars = {
         ...variables,
@@ -58,7 +58,14 @@ export const whatsappService = {
         message = message.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
       });
 
-      // 5. Send
+      // 5. Verify User
+      const hasWhatsapp = await whatsappApi.checkUser(barbershop.whatsapp_instance_token, client.phone);
+      if (!hasWhatsapp) {
+        console.warn('Client does not have a valid WhatsApp account');
+        return;
+      }
+
+      // 6. Send
       await whatsappApi.sendText(barbershop.whatsapp_instance_token, client.phone, message);
       console.log(`Message sent to ${client.phone}: ${message}`);
     } catch (err) {
@@ -94,10 +101,16 @@ export const whatsappService = {
         return { success: false, error: 'Cliente sem número de telefone cadastrado.' };
       }
 
+      // 3. Verify Number
+      const hasWhatsapp = await whatsappApi.checkUser(barbershop.whatsapp_instance_token, client.phone);
+      if (!hasWhatsapp) {
+        return { success: false, error: 'O número de telefone não está associado a uma conta WhatsApp.' };
+      }
+
       // 4. Mount Message
       const message = `Seu código de validação de atendimento na barbearia *${barbershop.name}* é: *${pin}*\n\nInforme este código ao seu barbeiro para concluir o atendimento e garantir seus pontos de fidelidade!`;
 
-      // 5. Send Message (Skip checkUser to avoid Wuzapi 500 error)
+      // 5. Send Message
       await whatsappApi.sendText(barbershop.whatsapp_instance_token, client.phone, message);
       console.log(`Validation code sent to ${client.phone}: ${pin}`);
       
