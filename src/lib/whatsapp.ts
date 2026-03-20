@@ -87,8 +87,16 @@ export const whatsappApi = {
     }
 
     const data = await response.json();
+    const statusData = data.data || {};
+    
+    // Support both Connected (OpenAPI) and connected (Actual API)
+    const isConnected = !!(statusData.Connected || statusData.connected);
+    const isLoggedIn = !!(statusData.LoggedIn || statusData.loggedIn);
+
+    console.log('[Wuzapi] Status response:', { isConnected, isLoggedIn, raw: statusData });
+
     return {
-      connected: data.data?.Connected && data.data?.LoggedIn,
+      connected: isConnected && isLoggedIn,
     };
   },
 
