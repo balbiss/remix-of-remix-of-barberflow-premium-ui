@@ -6,22 +6,24 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 interface PinValidationProps {
   open: boolean;
   pin: string;
+  clientName?: string;
+  wasSentViaWhatsApp?: boolean;
   onSuccess: () => void;
   onClose: () => void;
 }
 
-const PinValidation = ({ open, pin, onSuccess, onClose }: PinValidationProps) => {
+const PinValidation = ({ open, pin, clientName, wasSentViaWhatsApp, onSuccess, onClose }: PinValidationProps) => {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const handlePress = useCallback((digit: string) => {
-    if (input.length >= 4) return;
+    if (input.length >= pin.length) return;
     const next = input + digit;
     setInput(next);
     setError(false);
 
-    if (next.length === 4) {
+    if (next.length === pin.length) {
       if (next === pin) {
         setSuccess(true);
         setTimeout(() => {
@@ -96,17 +98,23 @@ const PinValidation = ({ open, pin, onSuccess, onClose }: PinValidationProps) =>
                   </button>
                 </div>
 
-                {/* Show PIN */}
-                <div className="text-4xl font-mono-tabular font-bold tracking-widest text-foreground mb-2">
-                  {pin.split('').join(' ')}
-                </div>
-                <p className="text-xs text-muted-foreground mb-6">
-                  Mostre ao cliente e confirme abaixo
+                {/* Show PIN or Message */}
+                {!wasSentViaWhatsApp && (
+                  <div className="text-4xl font-mono-tabular font-bold tracking-widest text-foreground mb-2">
+                    {pin.split('').join(' ')}
+                  </div>
+                )}
+                
+                <p className="text-sm text-center text-muted-foreground mb-6 max-w-[280px]">
+                  {wasSentViaWhatsApp 
+                    ? `Um código de ${pin.length} dígitos foi enviado para o WhatsApp de ${clientName || 'cliente'}. Peça o código e digite abaixo.`
+                    : 'Mostre o código acima ao cliente e confirme abaixo'
+                  }
                 </p>
 
                 {/* Input dots */}
-                <div className="flex gap-4 mb-8">
-                  {[0, 1, 2, 3].map((i) => (
+                <div className="flex gap-3 mb-8">
+                  {Array.from({ length: pin.length }).map((_, i) => (
                     <motion.div
                       key={i}
                       animate={error ? { x: [0, -8, 8, -4, 4, 0] } : {}}

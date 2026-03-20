@@ -71,5 +71,53 @@ export const whatsappService = {
     } catch (err) {
       console.error('Error in whatsappService.sendTemplateMessage:', err);
     }
+  },
+
+  sendValidationCode: async (
+    barbershopId: string,
+    clientId: string,
+    pin: string
+  ) => {
+    try {
+      // 1. Get Barbershop WhatsApp Config
+      const { data: barbershop, error: bError } = await supabase
+        .from('barbershops')
+        .select('name, whatsapp_instance_token, whatsapp_status')
+        .eq('id', barbershopId)
+        .single();
+
+      if (bError || !barbershop?.whatsapp_instance_token || barbershop.whatsapp_status !== 'connected') {
+        return { success: false, error: 'WhatsApp não conectado para esta barbearia.' };
+      }
+
+      // 2. Get Client Phone
+      const { data: client, error: cError } = await supabase
+        .from('clients')
+        .select('name, phone')
+        .eq('id', clientId)
+        .single();
+
+      if (cError || !client?.phone) {
+        return { success: false, error: 'Cliente sem número de telefone cadastrado.' };
+      }
+
+      // 3. Mount Message
+      const message = `Seu código de validação de atendimento na barbearia *${barbershop.name}* é: *${pin}*\n\nInforme este código ao seu barbeiro para concluir o atendimento e garantir seus pontos de fidelidade!`;
+
+      // 4. Check if Number has WhatsApp
+      const hasWhatsApp = await whatsappApi.checkUser(barbershop.whatsapp_instance_token, client.phone);
+      if (!hasWhatsApp) {
+        return { success: false, error: 'O número de telefone do cliente não tem WhatsApp.' };
+      }
+
+      // 5. Send Message
+      await whatsappApi.sendText(barbershop.whatsapp_instance_token, client.phone, message);
+      console.log(`Validation code sent to ${client.phone}: ${pin}`);
+      
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error in whatsappService.sendValidationCode:', err);
+      return { success: false, error: err.message || 'Erro inesperado ao enviar mensagem.' };
+    }
   }
 };

@@ -7,8 +7,9 @@ import { useAddCompletedService } from '@/hooks/useCompletedServices';
 import PinValidation from '@/components/PinValidation';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { usePopup } from '@/contexts/PopupContext';
+import { whatsappService } from '@/lib/whatsappService';
 
-const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
+const generatePin = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const formatCurrency = (value: string | number) => {
   if (typeof value === 'number') {
@@ -37,6 +38,8 @@ const RegisterPage = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [wasSentViaWhatsApp, setWasSentViaWhatsApp] = useState(false);
   const [completedList, setCompletedList] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,14 +47,38 @@ const RegisterPage = () => {
     s.name.toLowerCase().includes(serviceName.toLowerCase()) && serviceName.length > 0
   );
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (!selectedClient || !serviceName || parseCurrency(serviceValue) <= 0) {
       popup.error('Preencha cliente, serviço e valor');
       return;
     }
+
+    if (!user?.barbershopId) {
+      popup.error('Barbearia não identificada');
+      return;
+    }
+
+    setIsSendingCode(true);
     const newPin = generatePin();
     setPin(newPin);
+
+    // Try to send via WhatsApp
+    const result = await whatsappService.sendValidationCode(
+      user.barbershopId,
+      selectedClient,
+      newPin
+    );
+
+    if (result.success) {
+      setWasSentViaWhatsApp(true);
+      popup.success('Código enviado para o WhatsApp do cliente!');
+    } else {
+      setWasSentViaWhatsApp(false);
+      popup.info(result.error || 'Não foi possível enviar via WhatsApp. Use o código da tela.');
+    }
+
     setShowPin(true);
+    setIsSendingCode(false);
   };
 
   const handleValidated = async () => {
@@ -199,9 +226,17 @@ const RegisterPage = () => {
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={handleFinalize}
-          className="w-full h-14 rounded-xl gold-gradient-btn text-base flex items-center justify-center gap-2"
+          disabled={isSendingCode}
+          className="w-full h-14 rounded-xl gold-gradient-btn text-base flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          Finalizar Atendimento
+          {isSendingCode ? (
+             <>
+               <Loader2 className="w-5 h-5 animate-spin" />
+               Aguarde...
+             </>
+          ) : (
+            'Finalizar Atendimento'
+          )}
         </motion.button>
 
         {/* Completed Today */}
@@ -239,6 +274,8 @@ const RegisterPage = () => {
       <PinValidation
         open={showPin}
         pin={pin}
+        clientName={clients.find(c => c.id === selectedClient)?.name}
+        wasSentViaWhatsApp={wasSentViaWhatsApp}
         onSuccess={handleValidated}
         onClose={() => setShowPin(false)}
       />
