@@ -4,6 +4,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, token',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Expose-Headers': 'X-Proxy-Config, X-Target-URL, X-Error-Body',
 };
 
 Deno.serve(async (req) => {
@@ -12,8 +13,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const WUZAPI_URL = Deno.env.get('WUZAPI_URL') || 'https://weeb.inoovaweb.com.br';
-    const WUZAPI_ADMIN_TOKEN = Deno.env.get('WUZAPI_ADMIN_TOKEN');
+    const WUZAPI_URL = (Deno.env.get('WUZAPI_URL') || 'https://weeb.inoovaweb.com.br').trim();
+    const WUZAPI_ADMIN_TOKEN = Deno.env.get('WUZAPI_ADMIN_TOKEN')?.trim();
+
+    console.log(`[Proxy] Config: URL="${WUZAPI_URL.substring(0, 15)}..."`);
+    console.log(`[Proxy] Token: "${WUZAPI_ADMIN_TOKEN ? WUZAPI_ADMIN_TOKEN.substring(0, 4) : 'NULL'}..."`);
 
     if (!WUZAPI_ADMIN_TOKEN) {
       throw new Error('WUZAPI_ADMIN_TOKEN not configured');
@@ -62,18 +66,57 @@ Deno.serve(async (req) => {
       ? await req.text() 
       : undefined;
 
-    const response = await fetch(targetUrl, {
-      method: req.method,
-      headers: {
+    // Helper to call Wuzapi
+    const callWuzapi = async (authHeader: string) => {
+      const headers: any = {
         'Content-Type': 'application/json',
-        'Authorization': WUZAPI_ADMIN_TOKEN,
-        'token': req.headers.get('token') || '',
-      },
-      body,
-    });
+        'Authorization': authHeader,
+      };
+      const tokenHeader = req.headers.get('token');
+      if (tokenHeader) headers['token'] = tokenHeader;
 
-    const responseData = await response.text();
-    console.log(`[Proxy] Response: ${response.status}`);
+      return await fetch(targetUrl, {
+        method: req.method,
+        headers,
+        body,
+      });
+    };
+
+    // Attempt 1: As configured
+    let response = await callWuzapi(WUZAPI_ADMIN_TOKEN);
+    let responseData = await response.text();
+
+    // Attempt 2: Fallback to Bearer if 401 and not already using Bearer
+    if (response.status === 401 && !WUZAPI_ADMIN_TOKEN.startsWith('Bearer ')) {
+      console.log(`[Proxy] 401 Error. Retrying with Bearer...`);
+      const retryResponse = await callWuzapi(`Bearer ${WUZAPI_ADMIN_TOKEN}`);
+      const retryData = await retryResponse.text();
+      
+      if (retryResponse.ok || retryResponse.status !== 401) {
+        response = retryResponse;
+        responseData = retryData;
+      }
+    }
+
+    console.log(`[Proxy] Final Response: ${response.status}`);
+    
+    if (!response.ok) {
+      console.warn(`[Proxy] Error from target: ${responseData}`);
+      return new Response(JSON.stringify({ 
+        error: `Wuzapi Error ${response.status}: ${responseData.substring(0, 150)}`,
+        diagnostic: {
+          url: targetUrl,
+          token_preview: `${WUZAPI_ADMIN_TOKEN.substring(0, 4)}...`,
+          has_bearer: WUZAPI_ADMIN_TOKEN.startsWith('Bearer ')
+        }
+      }), {
+        status: response.status,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
 
     return new Response(responseData, {
       status: response.status,

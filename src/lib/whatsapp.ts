@@ -134,23 +134,36 @@ export const whatsappApi = {
   checkUser: async (instanceToken: string, phone: string) => {
     const formattedPhone = formatWhatsAppNumber(phone);
     const headers = await getHeaders(instanceToken);
-    const response = await fetch(`${PROXY_URL}/user/lid/${formattedPhone}`, {
-      method: 'GET',
-      headers,
-    });
+    
+    try {
+      const response = await fetch(`${PROXY_URL}/user/check`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ Phone: [formattedPhone] }),
+      });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        // User not found on WhatsApp
-        return false;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`[Wuzapi] Error checking number /user/check: ${errorText}`);
+        
+        // Se a API externa estiver dando erro 500, assumimos true para não travar o fluxo
+        // Pior cenário: a mensagem falha ao enviar, o que já engatilha o PIN na tela fallback.
+        if (response.status === 500) {
+          console.log('[Wuzapi] Ignorando erro 500 do /user/check e autorizando o envio.');
+          return true;
+        }
+
+        throw new Error('Erro ao verificar número no WhatsApp');
       }
-      const errorText = await response.text();
-      console.warn(`[Wuzapi] Error checking number /user/lid: ${errorText}`);
-      throw new Error('Erro ao verificar número no WhatsApp (verificação LID falhou)');
-    }
 
-    const result = await response.json();
-    return !!(result.jid); // If it returns JID, it's valid!
+      const result = await response.json();
+      // O Wuzapi retorna a lista de usuários validados num array.
+      return result.data?.Users?.[0]?.IsInWhatsapp || false;
+    } catch (err: any) {
+      console.warn(`[Wuzapi] Exception during checkUser: ${err.message}`);
+      // Permitir que tente enviar de qualquer forma para não bloquear vendas
+      return true;
+    }
   },
 
   sendText: async (instanceToken: string, number: string, text: string) => {
