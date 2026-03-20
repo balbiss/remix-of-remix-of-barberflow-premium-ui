@@ -41,6 +41,19 @@ export function useAddClient() {
   return useMutation({
     mutationFn: async (client: Omit<Client, 'id' | 'barbershop_id' | 'created_at'>) => {
       if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
+
+      const { data: existingClient, error: searchError } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('barbershop_id', user.barbershopId)
+        .eq('phone', client.phone)
+        .maybeSingle();
+
+      if (searchError) throw searchError;
+      if (existingClient) {
+        throw new Error(`Este número de WhatsApp já está cadastrado para o cliente: ${existingClient.name}`);
+      }
+
       const { data, error } = await supabase
         .from('clients')
         .insert({ ...client, barbershop_id: user.barbershopId })
@@ -62,6 +75,23 @@ export function useUpdateClient() {
 
   return useMutation({
     mutationFn: async (client: Partial<Client> & { id: string }) => {
+      if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
+
+      if (client.phone) {
+        const { data: existingClient, error: searchError } = await supabase
+          .from('clients')
+          .select('id, name')
+          .eq('barbershop_id', user.barbershopId)
+          .eq('phone', client.phone)
+          .neq('id', client.id)
+          .maybeSingle();
+
+        if (searchError) throw searchError;
+        if (existingClient) {
+          throw new Error(`Este número de WhatsApp já está cadastrado para o cliente: ${existingClient.name}`);
+        }
+      }
+
       const { data, error } = await supabase
         .from('clients')
         .update(client)

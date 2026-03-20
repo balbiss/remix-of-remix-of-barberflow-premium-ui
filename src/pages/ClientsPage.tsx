@@ -9,6 +9,18 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { usePopup } from '@/contexts/PopupContext';
 
+const formatPhone = (val: string) => {
+  let v = val.replace(/\D/g, '');
+  if (v.length <= 10) {
+    v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+    v = v.replace(/(\d{4})(\d)/, '$1-$2');
+  } else {
+    v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+    v = v.replace(/(\d{5})(\d)/, '$1-$2');
+  }
+  return v.substring(0, 15);
+};
+
 const ClientsPage = () => {
   const popup = usePopup();
   const { data: clients = [], isLoading } = useClients();
@@ -294,7 +306,7 @@ const ClientsPage = () => {
               <input
                 type="tel"
                 value={formPhone}
-                onChange={(e) => setFormPhone(e.target.value)}
+                onChange={(e) => setFormPhone(formatPhone(e.target.value))}
                 placeholder="(11) 99999-9999"
                 className="w-full h-12 px-4 rounded-xl bg-secondary text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
