@@ -30,10 +30,10 @@ export function useWhatsApp() {
       return status;
     },
     enabled: !!barbershop?.whatsapp_instance_token,
-    refetchInterval: (query) => {
-      // If not connected, poll every 5 seconds to catch the pairing
-      return query.state.data?.connected ? 30000 : 5000;
-    },
+    // Poll every 4s while disconnected, slow down to 30s once connected
+    refetchInterval: 4000,
+    refetchIntervalInBackground: true,
+    staleTime: 0,
   });
 
   const createInstance = useMutation({
