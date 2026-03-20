@@ -116,6 +116,46 @@ const RegisterPage = () => {
     }
   };
 
+  const handleRegisterWithoutPoints = async () => {
+    if (!selectedClient || !serviceName || parseCurrency(serviceValue) <= 0) {
+      popup.error('Preencha cliente, serviço e valor');
+      return;
+    }
+
+    const client = clients.find(c => c.id === selectedClient)!;
+    const price = parseCurrency(serviceValue);
+    
+    try {
+      const result = await addCompletedService.mutateAsync({
+        client_id: selectedClient,
+        service_name: serviceName,
+        service_price: price,
+        barber_id: user?.barberId || null,
+        loyalty_points: 0,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        validated: false,
+      });
+
+      const newEntry = {
+        id: result.id,
+        clientName: client.name,
+        serviceName,
+        servicePrice: price,
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setCompletedList(prev => [newEntry, ...prev]);
+      setShowPin(false);
+      setSelectedClient('');
+      setServiceName('');
+      setServiceValue('');
+      popup.success('Atendimento registrado sem pontos.');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao salvar atendimento');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="px-4 pt-6">
@@ -222,22 +262,34 @@ const RegisterPage = () => {
           </div>
         </div>
 
-        {/* Finalize Button */}
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={handleFinalize}
-          disabled={isSendingCode}
-          className="w-full h-14 rounded-xl gold-gradient-btn text-base flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {isSendingCode ? (
-             <>
-               <Loader2 className="w-5 h-5 animate-spin" />
-               Aguarde...
-             </>
-          ) : (
-            'Finalizar Atendimento'
-          )}
-        </motion.button>
+        <div className="flex flex-col gap-3">
+          {/* Finalize Button (With PIN & Points) */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleFinalize}
+            disabled={isSendingCode}
+            className="w-full h-14 rounded-xl gold-gradient-btn text-base flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isSendingCode ? (
+               <>
+                 <Loader2 className="w-5 h-5 animate-spin" />
+                 Aguarde...
+               </>
+            ) : (
+              'Finalizar e Validar Pontos'
+            )}
+          </motion.button>
+          
+          {/* Register without Points Button */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleRegisterWithoutPoints}
+            disabled={isSendingCode}
+            className="w-full h-14 rounded-xl border border-primary/20 text-primary text-base flex items-center justify-center hover:bg-primary/5 transition-colors disabled:opacity-50"
+          >
+            Registrar Sem Pontos
+          </motion.button>
+        </div>
 
         {/* Completed Today */}
         {completedList.length > 0 && (
