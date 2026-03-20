@@ -68,11 +68,12 @@ export function useWhatsApp() {
 
   const deleteInstance = useMutation({
     mutationFn: async () => {
-      if (!barbershop?.whatsapp_instance_id) {
-        // If we don't have the internal ID, just clear Supabase anyway
-        console.warn('No instance ID found, clearing Supabase only');
+      const { whatsapp_instance_id, whatsapp_instance_token } = barbershop || {};
+      
+      if (!whatsapp_instance_id && !whatsapp_instance_token) {
+        console.warn('No instance ID or token found, clearing Supabase only');
       } else {
-        await whatsappApi.deleteInstance(barbershop.whatsapp_instance_id);
+        await whatsappApi.deleteInstance(whatsapp_instance_id || undefined, whatsapp_instance_token || undefined);
       }
 
       // Clear from Supabase

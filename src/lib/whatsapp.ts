@@ -50,9 +50,13 @@ export const whatsappApi = {
     return result.data; // Includes id, name, token
   },
 
-  deleteInstance: async (instanceId: string) => {
+  deleteInstance: async (instanceId?: string, token?: string) => {
     const headers = await getHeaders();
-    const response = await fetch(`${PROXY_URL}/admin/users/${instanceId}/full`, {
+    const url = instanceId 
+      ? `${PROXY_URL}/admin/users/${instanceId}/full`
+      : `${PROXY_URL}/admin/users/full?token=${token}`;
+      
+    const response = await fetch(url, {
       method: 'DELETE',
       headers,
     });
