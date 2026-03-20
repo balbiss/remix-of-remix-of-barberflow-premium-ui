@@ -229,7 +229,7 @@ const SettingsPage = () => {
                 </div>
               </div>
             </div>
-          ) : !status?.connected ? (
+          ) : !loadingStatus && !status?.connected ? (
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
                 <div className="flex items-center justify-between mb-4">
