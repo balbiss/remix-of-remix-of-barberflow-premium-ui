@@ -173,11 +173,17 @@ const ReportsPage = () => {
               </motion.button>
 
               {showPdfOptions && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-card shadow-xl overflow-hidden z-20"
-                >
+                <>
+                  {/* Backdrop for mobile */}
+                  <div 
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden" 
+                    onClick={() => setShowPdfOptions(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className="fixed inset-x-4 top-[30%] -translate-y-1/2 md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:w-56 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden z-50 md:z-20"
+                  >
                   <div className="p-3 border-b border-border">
                     <p className="text-xs uppercase tracking-ultra text-muted-foreground mb-2">Filtrar por</p>
                     <select
@@ -206,7 +212,8 @@ const ReportsPage = () => {
                     Cancelar
                   </button>
                 </motion.div>
-              )}
+              </>
+            )}
             </div>
             )}
           </div>
