@@ -48,6 +48,15 @@ const SettingsPage = () => {
     }
   }, [barbershop]);
 
+  // Auto-clear pairing state when WhatsApp connects
+  useEffect(() => {
+    if (status?.connected && (pairingCode || showPhoneForm)) {
+      setPairingCode(null);
+      setShowPhoneForm(false);
+      setPairingPhone('');
+    }
+  }, [status?.connected]);
+
   const handleCreateInstance = async () => {
     if (!instanceNameInput.trim()) {
       popup.error('Informe um nome para a instância');
@@ -259,9 +268,14 @@ const SettingsPage = () => {
                         <p className="text-[10px] text-center text-muted-foreground px-4 leading-relaxed mt-2">
                           No seu WhatsApp: <span className="text-foreground font-bold">Aparelhos Conectados</span> &gt; <span className="text-foreground font-bold">Conectar um aparelho</span> &gt; <span className="text-foreground font-bold">Conectar com número de telefone</span>.
                         </p>
+                        {/* Live polling indicator */}
+                        <div className="flex items-center gap-2 mt-1">
+                          <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">Verificando conexão automaticamente...</span>
+                        </div>
                         <button 
                           onClick={() => setPairingCode(null)}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1 underline"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
                         >
                           Tentar outro número
                         </button>
