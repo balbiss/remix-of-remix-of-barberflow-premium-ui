@@ -5,6 +5,8 @@ import { usePopup } from '@/contexts/PopupContext';
 import { useMessageTemplates, useUpdateMessageTemplate, MessageTemplate } from '@/hooks/useMessageTemplates';
 import { useBarbershop, useUpdateBarbershop } from '@/hooks/useBarbershop';
 import { useServices, useAddService, useDeleteService } from '@/hooks/useServices';
+import { useWhatsApp } from '@/hooks/useWhatsApp';
+import { QrCode, Wifi, WifiOff, RefreshCw, Key } from 'lucide-react';
 
 const SettingsPage = () => {
   const popup = usePopup();
@@ -15,6 +17,37 @@ const SettingsPage = () => {
   const { data: services = [], isLoading: loadingServices } = useServices();
   const addServiceMut = useAddService();
   const deleteServiceMut = useDeleteService();
+
+  const { status, loadingStatus, createInstance, getPairingCode, isConfigured } = useWhatsApp();
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingPhone, setPairingPhone] = useState('');
+  const [isPairing, setIsPairing] = useState(false);
+
+  const handleCreateInstance = async () => {
+    try {
+      await createInstance.mutateAsync();
+      popup.success('Instância criada! Agora você pode parear seu celular.');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao criar instância');
+    }
+  };
+
+  const handleGetPairingCode = async () => {
+    if (!pairingPhone.trim()) {
+      popup.error('Informe o número do celular');
+      return;
+    }
+    setIsPairing(true);
+    try {
+      const code = await getPairingCode.mutateAsync(pairingPhone);
+      setPairingCode(code);
+      popup.success('Código gerado! Digite no seu WhatsApp.');
+    } catch (err: any) {
+      popup.error(err.message || 'Erro ao gerar código');
+    } finally {
+      setIsPairing(false);
+    }
+  };
 
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
@@ -120,43 +153,122 @@ const SettingsPage = () => {
         <h1 className="text-2xl font-bold tracking-display text-foreground mb-1">Configurações</h1>
         <p className="text-sm text-muted-foreground mb-6">Barbearia, WhatsApp e Mensagens</p>
 
-        {/* WhatsApp Number */}
+        {/* WhatsApp Connection Status */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="obsidian-card mb-6"
+          className="obsidian-card mb-6 overflow-hidden relative"
         >
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-[#25D366]/20 flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-[#25D366]" strokeWidth={1.5} />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                status?.connected ? 'bg-green-500/20' : 'bg-red-500/20'
+              }`}>
+                {status?.connected ? (
+                  <Wifi className="w-5 h-5 text-green-500" strokeWidth={1.5} />
+                ) : (
+                  <WifiOff className="w-5 h-5 text-red-500" strokeWidth={1.5} />
+                )}
+              </div>
+              <div>
+                <p className="text-base font-bold text-foreground">Status do WhatsApp</p>
+                <p className="text-xs text-muted-foreground">
+                  {status?.connected ? 'Conectado e pronto' : 'Desconectado'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-base font-bold text-foreground">WhatsApp Business</p>
-              <p className="text-xs text-muted-foreground">Número para envio de mensagens</p>
-            </div>
+            {loadingStatus && (
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            )}
           </div>
 
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-              <input
-                type="tel"
-                value={whatsappNumber}
-                onChange={e => setWhatsappNumber(e.target.value)}
-                placeholder="(11) 99999-9999"
-                className="w-full h-12 pl-10 pr-4 rounded-xl glass-input text-base text-foreground bg-secondary focus:outline-none"
-              />
+          {!isConfigured ? (
+            <div className="flex flex-col items-center justify-center py-4 text-center">
+              <p className="text-sm text-muted-foreground mb-4">
+                Sua instância ainda não foi configurada.
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleCreateInstance}
+                disabled={createInstance.isPending}
+                className="h-11 px-6 rounded-xl bg-primary text-primary-foreground flex items-center gap-2 text-sm font-bold shadow-lg shadow-primary/20"
+              >
+                {createInstance.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                Configurar Canal
+              </motion.button>
             </div>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handleSaveNumber}
-              className="h-12 px-4 rounded-xl bg-primary text-primary-foreground flex items-center gap-1.5 text-sm font-bold transition-all hover:brightness-110 active:scale-95 shadow-lg shadow-primary/20"
-            >
-              <Save className="w-4 h-4" strokeWidth={1.5} />
-              Salvar
-            </motion.button>
-          </div>
+          ) : !status?.connected ? (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
+                <p className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
+                  <Key className="w-3 h-3" />
+                  Conexão via Código de Pareamento
+                </p>
+                
+                {pairingCode ? (
+                  <div className="flex flex-col items-center gap-3 py-2">
+                    <div className="flex gap-2">
+                      {pairingCode.split('').map((char, i) => (
+                        <div key={i} className="w-8 h-10 rounded-lg bg-background border border-primary/30 flex items-center justify-center text-xl font-bold text-primary">
+                          {char}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground px-4 leading-relaxed">
+                      No seu WhatsApp: Configurações &gt; Aparelhos Conectados &gt; Conectar um aparelho &gt; Conectar com número de telefone.
+                    </p>
+                    <button 
+                      onClick={() => setPairingCode(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1 underline"
+                    >
+                      Gerar novo código
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={pairingPhone}
+                      onChange={e => setPairingPhone(e.target.value)}
+                      placeholder="Ex: 5511999999999"
+                      className="flex-1 h-11 px-4 rounded-lg glass-input text-sm text-foreground bg-background focus:outline-none"
+                    />
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleGetPairingCode}
+                      disabled={isPairing}
+                      className="h-11 px-4 rounded-lg bg-primary text-primary-foreground flex items-center gap-2 text-sm font-bold"
+                    >
+                      {isPairing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Parear'
+                      )}
+                    </motion.button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                  {status.phone_connected || 'WhatsApp Ativo'}
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                Online
+              </p>
+            </div>
+          )}
         </motion.div>
+
+        {/* WhatsApp Number (Business Info) */}
 
         {/* Fidelity Rules */}
         <motion.div

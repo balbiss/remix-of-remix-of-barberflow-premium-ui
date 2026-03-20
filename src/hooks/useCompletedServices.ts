@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { whatsappService } from '@/lib/whatsappService';
 
 export interface CompletedService {
   id: string;
@@ -54,7 +55,13 @@ export function useAddCompletedService() {
     mutationFn: async (service: Omit<CompletedService, 'id' | 'barbershop_id' | 'created_at'>) => {
       if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
       
-      // 1. Insert completed service
+      // 1. Fetch current client stamps and barbershop limit for notification logic
+      const [{ data: clientBefore }, { data: barbershop }] = await Promise.all([
+        supabase.from('clients').select('loyalty_stamps').eq('id', service.client_id).single(),
+        supabase.from('barbershops').select('loyalty_stamps_limit').eq('id', user.barbershopId).single()
+      ]);
+
+      // 2. Insert completed service
       const { data, error } = await supabase
         .from('completed_services')
         .insert({ ...service, barbershop_id: user.barbershopId })
@@ -63,19 +70,50 @@ export function useAddCompletedService() {
       
       if (error) throw error;
 
-      // 2. Update client loyalty and total spent
-      // This could be a DB trigger too, but let's do it here for clarity or rely on DB trigger if we added one.
-      // We didn't add a trigger for total_spent update yet, so let's do an RPC or manual update.
+      // 3. Update client loyalty and total spent
       const { error: clientError } = await supabase.rpc('increment_client_stats', {
         p_client_id: service.client_id,
         p_amount: service.service_price,
         p_points: service.loyalty_points
       });
 
-      // Note: If RPC doesn't exist, we'd need to create it. I didn't create it in my previous migration.
-      // I'll add a migration for this RPC now.
-      
-      return data;
+      if (clientError) console.error('Error incrementing client stats:', clientError);
+
+       // 4. Send WhatsApp Notification
+       try {
+         const oldStamps = clientBefore?.loyalty_stamps || 0;
+         const newStamps = oldStamps + service.loyalty_points;
+         const limit = barbershop?.loyalty_stamps_limit || 10;
+
+         if (newStamps >= limit && oldStamps < limit) {
+           // Send Loyalty Reward Template
+           await whatsappService.sendTemplateMessage(
+             user.barbershopId,
+             service.client_id,
+             'Fidelidade',
+             {
+               servico: service.service_name
+             }
+           );
+         } else {
+           // Send Standard Service Completed Template
+           await whatsappService.sendTemplateMessage(
+             user.barbershopId,
+             service.client_id,
+             'Serviço Realizado',
+             {
+               servico: service.service_name,
+               valor: service.service_price.toString(),
+               pontos: service.loyalty_points.toString(),
+               total_selos: newStamps.toString()
+             }
+           );
+         }
+       } catch (wsError) {
+         console.error('WhatsApp notification failed:', wsError);
+       }
+
+       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['completed-services', user?.barbershopId] });
