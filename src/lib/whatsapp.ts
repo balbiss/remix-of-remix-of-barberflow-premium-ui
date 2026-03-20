@@ -131,7 +131,7 @@ export const whatsappApi = {
     };
   },
 
-  checkUser: async (instanceToken: string, phone: string) => {
+  checkUser: async (instanceToken: string, phone: string): Promise<string | boolean> => {
     const formattedPhone = formatWhatsAppNumber(phone);
     const headers = await getHeaders(instanceToken);
     
@@ -146,6 +146,12 @@ export const whatsappApi = {
         const errorText = await response.text();
         console.warn(`[Wuzapi] Error checking number /user/check: ${errorText}`);
         
+        if (errorText.includes('no session')) {
+          console.warn('[Wuzapi] Sessão inativa detectada no checkUser, tentando reconectar em background...');
+          // Tenta reconectar a sessão que caiu por restart do servidor do WuzAPI
+          whatsappApi.connectSession(instanceToken).catch(console.error);
+        }
+
         // Se a API externa estiver dando erro 500, assumimos true para não travar o fluxo
         // Pior cenário: a mensagem falha ao enviar, o que já engatilha o PIN na tela fallback.
         if (response.status === 500) {
@@ -158,7 +164,11 @@ export const whatsappApi = {
 
       const result = await response.json();
       // O Wuzapi retorna a lista de usuários validados num array.
-      return result.data?.Users?.[0]?.IsInWhatsapp || false;
+      const user = result.data?.Users?.[0];
+      if (user?.IsInWhatsapp && user?.JID) {
+        return user.JID; // Retorna o JID exato que o WhatsApp reconheceu (ex: sem o nono dígito)
+      }
+      return user?.IsInWhatsapp || false;
     } catch (err: any) {
       console.warn(`[Wuzapi] Exception during checkUser: ${err.message}`);
       // Permitir que tente enviar de qualquer forma para não bloquear vendas
@@ -179,8 +189,41 @@ export const whatsappApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erro ao enviar mensagem');
+      const errorText = await response.text();
+      let errorObj;
+      try {
+        errorObj = JSON.parse(errorText);
+      } catch (e) {
+        errorObj = { error: errorText };
+      }
+
+      const errorMessage = errorObj.error || errorObj.message || errorText;
+
+      // Auto reconnect se a sessão estiver offline e tenta enviar novamente
+      if (typeof errorMessage === 'string' && errorMessage.includes('no session')) {
+        console.warn('[Wuzapi] Sessão inativa detectada no sendText, reconectando e tentando novamente...');
+        await whatsappApi.connectSession(instanceToken);
+        
+        // Aguarda 3 segundos para dar tempo do WuzAPI conectar o socket
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const retryResponse = await fetch(`${PROXY_URL}/chat/send/text`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            Phone: formattedPhone,
+            Body: text,
+          }),
+        });
+
+        if (!retryResponse.ok) {
+          const retryError = await retryResponse.json().catch(() => ({}));
+          throw new Error(retryError.error || retryError.message || 'Erro ao enviar mensagem na segunda tentativa');
+        }
+        return retryResponse.json();
+      }
+
+      throw new Error(errorMessage || 'Erro ao enviar mensagem');
     }
 
     return response.json();

@@ -65,8 +65,11 @@ export const whatsappService = {
         return;
       }
 
+      // Use actual resolved JID from WhatsApp if available, otherwise raw phone
+      const destinationPhone = typeof hasWhatsapp === 'string' ? hasWhatsapp : client.phone;
+
       // 6. Send
-      await whatsappApi.sendText(barbershop.whatsapp_instance_token, client.phone, message);
+      await whatsappApi.sendText(barbershop.whatsapp_instance_token, destinationPhone, message);
       console.log(`Message sent to ${client.phone}: ${message}`);
     } catch (err) {
       console.error('Error in whatsappService.sendTemplateMessage:', err);
@@ -107,11 +110,14 @@ export const whatsappService = {
         return { success: false, error: 'O número de telefone não está associado a uma conta WhatsApp.' };
       }
 
+      // Use actual resolved JID from WhatsApp se houver (lida com problema do nono dígito)
+      const destinationPhone = typeof hasWhatsapp === 'string' ? hasWhatsapp : client.phone;
+
       // 4. Mount Message
       const message = `Seu código de validação de atendimento na barbearia *${barbershop.name}* é: *${pin}*\n\nInforme este código ao seu barbeiro para concluir o atendimento e garantir seus pontos de fidelidade!`;
 
       // 5. Send Message
-      await whatsappApi.sendText(barbershop.whatsapp_instance_token, client.phone, message);
+      await whatsappApi.sendText(barbershop.whatsapp_instance_token, destinationPhone, message);
       console.log(`Validation code sent to ${client.phone}: ${pin}`);
       
       return { success: true };
