@@ -73,7 +73,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
 
           <div className="flex flex-col gap-4">
             <motion.a
-               href={`https://pay.cakto.com.br/B8BcHrY?email=${user?.email}&name=${user?.name}`}
+               href={`https://pay.cakto.com.br/b5xqqtr_811619?email=${user?.email}&name=${user?.name}`}
                target="_blank"
                rel="noopener noreferrer"
                whileTap={{ scale: 0.97 }}
