@@ -33,21 +33,23 @@ import { useNavigate } from 'react-router-dom';
 const SaaSAdminDashboard = () => {
   const navigate = useNavigate();
   const popup = usePopup();
+  const { user } = useAuth();
   const { shops, isLoading, updateStatus } = useSaaSAdmin();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'blocked' | 'expired'>('all');
   const [selectedShop, setSelectedShop] = useState<AdminBarbershop | null>(null);
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
 
-  // Statistics
+  // Statistics - Exclude SuperAdmin's own shop to avoid confusion
+  const statsShops = shops.filter(s => s.owner_email !== user?.email);
   const stats = {
-    total: shops.length,
-    active: shops.filter(s => s.subscription_status === 'active' || s.subscription_status === 'premium').length,
-    blocked: shops.filter(s => s.subscription_status === 'blocked').length,
-    expired: shops.filter(s => s.subscription_expiry && !isAfter(parseISO(s.subscription_expiry), new Date())).length,
-    mrr: shops.reduce((acc, s) => {
-        // Simple MRR estimate: R$ 49,90 per active shop
-        return (s.subscription_status === 'active' || s.subscription_status === 'premium') ? acc + 49.9 : acc;
+    total: statsShops.length,
+    active: statsShops.filter(s => s.subscription_status === 'active' || s.subscription_status === 'premium').length,
+    blocked: statsShops.filter(s => s.subscription_status === 'blocked').length,
+    expired: statsShops.filter(s => s.subscription_expiry && !isAfter(parseISO(s.subscription_expiry), new Date())).length,
+    mrr: statsShops.reduce((acc, s) => {
+        // Updated MRR estimate: R$ 67,90 per active shop
+        return (s.subscription_status === 'active' || s.subscription_status === 'premium') ? acc + 67.9 : acc;
     }, 0)
   };
 
@@ -181,7 +183,7 @@ const SaaSAdminDashboard = () => {
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">MRR Estimado</p>
             <h3 className="text-3xl font-bold gold-text tracking-display">R$ {stats.mrr.toLocaleString('pt-BR')}</h3>
             <div className="flex items-center gap-1.5 text-[10px] text-gold-text font-medium">
-              Baseado em R$ 49,90/loja
+              Baseado em R$ 67,90/loja
             </div>
           </motion.div>
         </div>

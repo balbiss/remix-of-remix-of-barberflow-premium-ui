@@ -52,7 +52,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
           <div className="obsidian-card text-left p-6 mb-8 border-primary/20 bg-primary/5">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm uppercase tracking-ultra text-muted-foreground font-bold">Plano Profissional</span>
-              <span className="text-2xl font-bold text-foreground">R$ 59,90<span className="text-sm font-normal text-muted-foreground">/mês</span></span>
+              <span className="text-2xl font-bold text-foreground">R$ 67,90<span className="text-sm font-normal text-muted-foreground">/mês</span></span>
             </div>
             
             <ul className="space-y-3">
