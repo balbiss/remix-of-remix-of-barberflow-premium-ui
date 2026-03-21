@@ -80,7 +80,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
                className="w-full h-14 rounded-xl gold-gradient-btn text-base font-bold flex items-center justify-center gap-2"
              >
                <CreditCard className="w-5 h-5" />
-               Assinar Agora (R$ 59,90)
+               Assinar Agora (R$ 67,90)
              </motion.a>
              
              <button 
