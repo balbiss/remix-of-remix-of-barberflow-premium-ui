@@ -111,6 +111,16 @@ const RegisterPage = () => {
       return;
     }
 
+    const price = parseCurrency(serviceValue);
+    const minVal = barbershop?.loyalty_min_value || 0;
+
+    if (price < minVal) {
+      // Se o valor for abaixo do mínimo, não precisa de PIN, finaliza direto
+      setIsSendingCode(false);
+      await handleValidated();
+      return;
+    }
+
     const newPin = generatePin();
     setPin(newPin);
 
@@ -352,12 +362,15 @@ const RegisterPage = () => {
         </div>
 
         <div className="flex flex-col gap-3">
-          {/* Finalize Button (With PIN & Points) */}
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleFinalize}
             disabled={isSendingCode}
-            className="w-full h-14 rounded-xl gold-gradient-btn text-base flex items-center justify-center gap-2 disabled:opacity-50"
+            className={`w-full h-14 rounded-xl text-base flex items-center justify-center gap-2 disabled:opacity-50 transition-all ${
+              parseCurrency(serviceValue) < (barbershop?.loyalty_min_value || 0) 
+                ? 'bg-secondary text-foreground border border-border/50' 
+                : 'gold-gradient-btn'
+            }`}
           >
             {isSendingCode ? (
                <>
@@ -365,7 +378,9 @@ const RegisterPage = () => {
                  Aguarde...
                </>
             ) : (
-              'Finalizar e Validar Pontos'
+              parseCurrency(serviceValue) < (barbershop?.loyalty_min_value || 0) 
+                ? 'Finalizar Atendimento' 
+                : 'Finalizar e Validar Pontos'
             )}
           </motion.button>
           
