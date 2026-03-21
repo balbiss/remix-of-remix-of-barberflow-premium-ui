@@ -32,6 +32,7 @@ export function useUpdateBarbershop() {
       whatsapp_number?: string;
       loyalty_stamps_limit?: number;
       loyalty_reward_name?: string;
+      loyalty_min_value?: number;
     }) => {
       if (!user?.barbershopId) throw new Error('ID da barbearia não encontrado');
       

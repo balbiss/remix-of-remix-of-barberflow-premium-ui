@@ -36,12 +36,14 @@ const SettingsPage = () => {
   // Fidelity Rules State
   const [loyaltyStampsLimit, setLoyaltyStampsLimit] = useState(10);
   const [loyaltyRewardName, setLoyaltyRewardName] = useState('Corte Grátis');
+  const [loyaltyMinValue, setLoyaltyMinValue] = useState(0);
 
   useEffect(() => {
     if (barbershop) {
       setWhatsappNumber(barbershop.whatsapp_number || '');
       setLoyaltyStampsLimit(barbershop.loyalty_stamps_limit || 10);
       setLoyaltyRewardName(barbershop.loyalty_reward_name || 'Corte Grátis');
+      setLoyaltyMinValue(barbershop.loyalty_min_value || 0);
       if (!instanceNameInput && barbershop.name) {
         setInstanceNameInput(barbershop.name.replace(/\s+/g, '_'));
       }
@@ -116,7 +118,8 @@ const SettingsPage = () => {
     try {
       await updateBarbershopMut.mutateAsync({ 
         loyalty_stamps_limit: loyaltyStampsLimit,
-        loyalty_reward_name: loyaltyRewardName
+        loyalty_reward_name: loyaltyRewardName,
+        loyalty_min_value: loyaltyMinValue
       });
       popup.success('Regras de fidelidade salvas!');
     } catch (err: any) {
@@ -388,6 +391,18 @@ const SettingsPage = () => {
                   placeholder="Ex: Corte Grátis"
                   className="w-full h-11 px-4 rounded-lg glass-input text-sm text-foreground bg-secondary focus:outline-none"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-ultra text-muted-foreground font-bold ml-1">Valor Mínimo para Selo</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">R$</span>
+                  <input
+                    type="number"
+                    value={loyaltyMinValue}
+                    onChange={e => setLoyaltyMinValue(parseFloat(e.target.value) || 0)}
+                    className="w-full h-11 pl-9 pr-4 rounded-lg glass-input text-sm text-foreground bg-secondary focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
             <motion.button

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useServices } from '@/hooks/useServices';
 import { useClients, useAddClient } from '@/hooks/useClients';
 import { useAddCompletedService } from '@/hooks/useCompletedServices';
+import { useBarbershop } from '@/hooks/useBarbershop';
 import PinValidation from '@/components/PinValidation';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { usePopup } from '@/contexts/PopupContext';
@@ -32,6 +33,7 @@ const RegisterPage = () => {
   const addClient = useAddClient();
   const { data: services = [], isLoading: loadingServices } = useServices();
   const addCompletedService = useAddCompletedService();
+  const { data: barbershop } = useBarbershop();
 
   const [clientPhone, setClientPhone] = useState('');
   const [clientName, setClientName] = useState('');
@@ -135,6 +137,8 @@ const RegisterPage = () => {
     // If the client was newly created during Finalize, selectedClient now has their ID!
     const client = clients.find(c => c.id === selectedClient) || { name: clientName };
     const price = parseCurrency(serviceValue);
+    const minVal = barbershop?.loyalty_min_value || 0;
+    const points = price >= minVal ? 1 : 0;
     
     try {
       const result = await addCompletedService.mutateAsync({
@@ -142,7 +146,7 @@ const RegisterPage = () => {
         service_name: serviceName,
         service_price: price,
         barber_id: user?.barberId || null,
-        loyalty_points: 1,
+        loyalty_points: points,
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         validated: true,
@@ -213,7 +217,7 @@ const RegisterPage = () => {
 
       const newEntry = {
         id: result.id,
-        clientName: client.name,
+        clientName: clientName,
         serviceName,
         servicePrice: price,
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -339,6 +343,11 @@ const RegisterPage = () => {
                 className="w-full h-12 pl-12 pr-4 rounded-xl glass-input text-base text-foreground font-mono-tabular focus:outline-none bg-secondary"
               />
             </div>
+            {barbershop?.loyalty_min_value > 0 && parseCurrency(serviceValue) > 0 && parseCurrency(serviceValue) < barbershop.loyalty_min_value && (
+              <p className="text-[10px] text-orange-500 font-bold uppercase tracking-wider mt-1 ml-1 animate-pulse">
+                ⚠️ Valor abaixo do mínimo (R$ {barbershop.loyalty_min_value.toFixed(2)}) para ganhar selo
+              </p>
+            )}
           </div>
         </div>
 
