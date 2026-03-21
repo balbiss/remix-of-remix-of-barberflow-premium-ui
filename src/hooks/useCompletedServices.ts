@@ -189,6 +189,24 @@ export function useDeleteCompletedService() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // 1. Buscar detalhes do serviço ANTES de deletar para saber o que subtrair
+      const { data: service } = await supabase
+        .from('completed_services')
+        .select('client_id, service_price, loyalty_points')
+        .eq('id', id)
+        .single();
+      
+      if (service) {
+        // 2. Decrementar estatísticas do cliente (valor gasto e selos)
+        const { error: rpcError } = await supabase.rpc('decrement_client_stats', {
+          p_client_id: service.client_id,
+          p_amount: service.service_price,
+          p_points: service.loyalty_points
+        });
+        if (rpcError) console.error('[useCompletedServices] Erro ao decrementar stats:', rpcError);
+      }
+
+      // 3. Deletar o serviço
       const { error } = await supabase
         .from('completed_services')
         .delete()
@@ -196,9 +214,10 @@ export function useDeleteCompletedService() {
       if (error) throw error;
     },
     onSuccess: () => {
-      // Invalida todas as queries que começam com 'completed-services'
+      // Invalida todas as queries relacionadas para atualizar UI
       queryClient.invalidateQueries({ queryKey: ['completed-services'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
   });
 }
