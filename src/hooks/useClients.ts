@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { whatsappService } from '@/lib/whatsappService';
 
 export interface Client {
   id: string;
@@ -61,6 +62,19 @@ export function useAddClient() {
         .single();
       
       if (error) throw error;
+
+      // Send Welcome Message
+      try {
+        await whatsappService.sendTemplateMessage(
+          user.barbershopId,
+          data.id,
+          'Boas-vindas',
+          {}
+        );
+      } catch (wsError) {
+        console.error('Welcome message failed:', wsError);
+      }
+
       return data;
     },
     onSuccess: () => {

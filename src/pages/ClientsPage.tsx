@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { usePopup } from '@/contexts/PopupContext';
+import { whatsappService } from '@/lib/whatsappService';
+import { differenceInDays, parseISO } from 'date-fns';
 
 const formatPhone = (val: string) => {
   let v = val.replace(/\D/g, '');
@@ -258,6 +260,29 @@ const ClientsPage = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="flex gap-2 mt-3 pt-3 border-t border-border"
                   >
+                    {client.last_visit && differenceInDays(new Date(), parseISO(client.last_visit)) >= 30 && (
+                      <Button
+                        variant="outline"
+                        size="default"
+                        className="flex-1 gap-1.5 text-sm h-11 border-orange-500/50 text-orange-500 hover:bg-orange-500/10"
+                        onClick={async (e) => { 
+                          e.stopPropagation(); 
+                          try {
+                            await whatsappService.sendTemplateMessage(
+                              barbershop?.id!,
+                              client.id,
+                              'Saudade',
+                              {}
+                            );
+                            popup.success('Mensagem de saudade enviada!');
+                          } catch (err) {
+                            popup.error('Erro ao enviar mensagem');
+                          }
+                        }}
+                      >
+                        <Phone className="w-4 h-4" /> Enviar Saudade
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       size="default"
