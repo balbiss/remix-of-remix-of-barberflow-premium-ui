@@ -252,8 +252,8 @@ const SaaSAdminDashboard = () => {
                     selectedShop?.id === shop.id ? 'border-primary' : ''
                   }`}
                 >
-                  <div className="flex items-center justify-between p-4 group">
-                    <div className="flex items-center gap-4">
+                   <div className="flex items-center justify-between p-4 group gap-4">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
                         isBlocked ? 'bg-red-500/10' : isActive ? 'bg-primary/10' : 'bg-secondary'
                       }`}>
@@ -261,13 +261,13 @@ const SaaSAdminDashboard = () => {
                            isBlocked ? 'text-red-500' : isActive ? 'text-primary' : 'text-muted-foreground'
                          }`} />
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">
                           {shop.name}
                         </h4>
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Mail className="w-3 h-3" /> {shop.owner_email || 'E-mail não disponível'}
+                            <Mail className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{shop.owner_email || 'E-mail não disponível'}</span>
                           </div>
                           <div className="flex items-center gap-3 mt-1.5">
                              <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
@@ -286,7 +286,7 @@ const SaaSAdminDashboard = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
                       <Button
                          variant="ghost"
                          size="icon"
