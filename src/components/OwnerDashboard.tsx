@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DollarSign, TrendingUp, Users, Scissors, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Scissors, Loader2, Pencil, Trash2, Check, X, Crown, Calendar } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import { useDashboardStats, useCompletedServices, useUpdateCompletedService, useDeleteCompletedService } from '@/hooks/useCompletedServices';
 import { usePopup } from '@/contexts/PopupContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const container = {
   hidden: {},
@@ -17,6 +18,7 @@ const item = {
 
 const OwnerDashboard = () => {
   const popup = usePopup();
+  const { user } = useAuth();
   const { data: stats, isLoading: loadingStats } = useDashboardStats();
   const today = new Date().toISOString().split('T')[0];
   const { data: recentServices = [], isLoading: loadingServices } = useCompletedServices(today);
@@ -88,6 +90,23 @@ const OwnerDashboard = () => {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      {/* Subscription Banner */}
+      {user?.subscriptionExpiry && (
+        <motion.div variants={item} className="obsidian-card bg-gradient-to-r from-[#111] to-[#1a1a1a] border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.05)]">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+              <Crown className="w-6 h-6 text-yellow-500" />
+            </div>
+            <div>
+              <p className="text-white font-medium text-lg leading-tight">Plano Premium Ativo</p>
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Vencimento em <span className="text-yellow-500 font-semibold">{new Date(user.subscriptionExpiry).toLocaleDateString('pt-BR')}</span>
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
         {statCards.map((stat) => (

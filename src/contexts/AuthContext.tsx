@@ -12,6 +12,7 @@ export interface User {
   barbershopId: string;
   barbershopName: string;
   subscriptionStatus: string;
+  subscriptionExpiry?: string | null;
   avatar?: string;
   barberId?: string; // barbers table id (for barber role)
 }
@@ -90,6 +91,7 @@ async function loadUserProfile(supabaseUser: SupabaseUser, retryCount = 0): Prom
       barbershopId: profile.barbershop_id,
       barbershopName: barbershop.name || '',
       subscriptionStatus: barbershop.subscription_status || 'pending',
+      subscriptionExpiry: barbershop.subscription_expiry || null,
       avatar: profile.avatar_url || undefined,
       barberId,
     };
