@@ -55,14 +55,22 @@ const SaaSAdminDashboard = () => {
   };
 
   const filteredShops = shops.filter(s => {
+    // 1. Exclude superadmin's own shop from the list
+    if (s.owner_email === user?.email) return false;
+
+    // 2. Search filter
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || 
                           s.owner_email?.toLowerCase().includes(search.toLowerCase());
     
-    if (filter === 'all') return matchesSearch;
-    if (filter === 'active') return matchesSearch && (s.subscription_status === 'active' || s.subscription_status === 'premium');
-    if (filter === 'blocked') return matchesSearch && s.subscription_status === 'blocked';
-    if (filter === 'expired') return matchesSearch && s.subscription_expiry && !isAfter(parseISO(s.subscription_expiry), new Date());
-    return matchesSearch;
+    if (!matchesSearch) return false;
+    
+    // 3. Status filters
+    if (filter === 'all') return true;
+    if (filter === 'active') return (s.subscription_status === 'active' || s.subscription_status === 'premium');
+    if (filter === 'blocked') return s.subscription_status === 'blocked';
+    if (filter === 'expired') return s.subscription_expiry && !isAfter(parseISO(s.subscription_expiry), new Date());
+    
+    return true;
   });
 
   const handleAction = async (id: string, action: 'activate' | 'block' | 'unblock') => {
