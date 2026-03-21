@@ -38,7 +38,7 @@ const DashboardPage = () => {
         transition={{ duration: 0.3 }}
         className="px-4"
       >
-        {role === 'owner' ? <OwnerDashboard /> : <BarberDashboard />}
+        {role === 'barber' ? <BarberDashboard /> : <OwnerDashboard />}
       </motion.div>
     </div>
   );

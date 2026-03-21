@@ -1,4 +1,4 @@
-import { Home, PlusCircle, Users, BarChart3, Users2, Settings } from 'lucide-react';
+import { Home, PlusCircle, Users, BarChart3, Users2, Settings, ShieldCheck } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,14 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const { role } = useAuth();
 
-  const navItems = role === 'owner'
+  const navItems = role === 'superadmin'
+    ? [
+        { icon: ShieldCheck, label: 'SaaS Admin', path: '/saas-admin' },
+        { icon: Home, label: 'Início', path: '/dashboard' },
+        { icon: Users, label: 'Clientes', path: '/clients' },
+        { icon: BarChart3, label: 'Relatórios', path: '/reports' },
+      ]
+    : role === 'owner'
     ? [
         { icon: Home, label: 'Início', path: '/dashboard' },
         { icon: Users, label: 'Clientes', path: '/clients' },

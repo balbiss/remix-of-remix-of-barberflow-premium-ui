@@ -19,8 +19,8 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
     );
   }
 
-  // Barbers are exempt from subscription check (only owners pay)
-  if (user?.role === 'barber') {
+  // Barbers and SuperAdmins are exempt from subscription check (only owners pay)
+  if (user?.role === 'barber' || user?.role === 'superadmin') {
     return <>{children}</>;
   }
 

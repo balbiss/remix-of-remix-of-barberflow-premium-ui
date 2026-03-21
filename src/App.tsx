@@ -12,6 +12,7 @@ import ClientsPage from "./pages/ClientsPage";
 import ReportsPage from "./pages/ReportsPage";
 import BarbersPage from "./pages/BarbersPage";
 import SettingsPage from "./pages/SettingsPage";
+import SaaSAdminDashboard from "./pages/SaaSAdminDashboard";
 import SubscriptionGuard from "./components/SubscriptionGuard";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
@@ -35,6 +36,9 @@ const AuthenticatedLayout = () => {
             <Route path="/barbers" element={<BarbersPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </>
+        )}
+        {role === 'superadmin' && (
+          <Route path="/saas-admin" element={<SaaSAdminDashboard />} />
         )}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
