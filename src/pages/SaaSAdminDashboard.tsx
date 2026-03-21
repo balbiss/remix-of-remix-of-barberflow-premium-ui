@@ -29,6 +29,7 @@ import { usePopup } from '@/contexts/PopupContext';
 import { format, addDays, parseISO, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SaaSAdminDashboard = () => {
   const navigate = useNavigate();
