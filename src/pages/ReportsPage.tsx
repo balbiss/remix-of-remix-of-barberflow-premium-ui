@@ -116,14 +116,17 @@ const ReportsPage = () => {
     autoTable(doc, {
       startY: 52,
       head: [['Cliente', 'Serviço', 'Valor', 'Barbeiro', 'Data', 'Hora']],
-      body: filtered.map(s => [
-        s.client?.name || 'N/A',
-        s.service_name,
-        `R$ ${s.service_price.toFixed(2)}`,
-        s.barber?.name || 'N/A',
-        s.date,
-        s.time,
-      ]),
+      body: filtered.map(s => {
+        const [year, month, day] = s.date.split('-');
+        return [
+          s.client?.name || 'N/A',
+          s.service_name,
+          `R$ ${s.service_price.toFixed(2)}`,
+          s.barber?.name || 'N/A',
+          `${day}-${month}-${year}`,
+          s.time,
+        ];
+      }),
       theme: 'grid',
       headStyles: { fillColor: [212, 175, 55] },
     });
@@ -138,8 +141,10 @@ const ReportsPage = () => {
     if (pdfFilter !== 'all') {
       const barber = barbers.find(b => b.id === pdfFilter);
       if (barber) {
-        const commissionVal = rev * (barber.commission || 0.45);
-        doc.text(`Comissão (${((barber.commission || 0.45) * 100).toFixed(0)}%): R$ ${commissionVal.toFixed(2)}`, 14, finalY + 14);
+        // Commission is stored as whole percentage (e.g., 20 for 20%)
+        const commRate = barber.commission !== undefined && barber.commission !== null ? barber.commission / 100 : 0.45;
+        const commissionVal = rev * commRate;
+        doc.text(`Comissão (${(commRate * 100).toFixed(0)}%): R$ ${commissionVal.toFixed(2)}`, 14, finalY + 14);
       }
     }
 
