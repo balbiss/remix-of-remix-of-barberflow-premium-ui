@@ -7,6 +7,7 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { role } = useAuth();
+  console.log('[BottomNav] Current Role:', role);
 
   const navItems = role === 'superadmin'
     ? [
