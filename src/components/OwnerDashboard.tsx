@@ -5,6 +5,9 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
 import { useDashboardStats, useCompletedServices, useUpdateCompletedService, useDeleteCompletedService } from '@/hooks/useCompletedServices';
 import { usePopup } from '@/contexts/PopupContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
+import { Link } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 
 const container = {
   hidden: {},
@@ -20,6 +23,7 @@ const OwnerDashboard = () => {
   const popup = usePopup();
   const { user } = useAuth();
   const { data: stats, isLoading: loadingStats } = useDashboardStats();
+  const { data: whatsappStatus } = useWhatsAppStatus();
   const today = new Date().toISOString().split('T')[0];
   const { data: recentServices = [], isLoading: loadingServices } = useCompletedServices(today);
   
@@ -103,6 +107,29 @@ const OwnerDashboard = () => {
                 Vencimento em <span className="text-yellow-500 font-semibold">{new Date(user.subscriptionExpiry).toLocaleDateString('pt-BR')}</span>
               </p>
             </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* WhatsApp Disconnected Warning */}
+      {whatsappStatus && !whatsappStatus.connected && (
+        <motion.div variants={item} className="obsidian-card bg-red-500/10 border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <p className="text-red-500 font-bold text-sm">WhatsApp Desconectado!</p>
+                <p className="text-xs text-muted-foreground mt-0.5">O bot não enviará lembretes automáticos.</p>
+              </div>
+            </div>
+            <Link 
+              to="/settings" 
+              className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-red-600 transition-colors"
+            >
+              Conectar
+            </Link>
           </div>
         </motion.div>
       )}
